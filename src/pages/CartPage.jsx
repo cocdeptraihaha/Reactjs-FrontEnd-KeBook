@@ -1,121 +1,149 @@
-import { useEffect, useState } from 'react'
-import styled from 'styled-components'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { cartApi } from '../api/cart'
+import { useAuth } from '../auth/auth-store'
 import { CartItem } from '../components/CartItem'
 import { OrderSummary } from '../components/OrderSummary'
 import { Section, SectionSub, SectionTitle } from '../components/Section'
-import { TopBar } from '../components/TopBar'
+import {
+  Stack,
+  Layout,
+  CartList,
+  StateText,
+  HeadRow,
+  RetryButton,
+  LoginCta
+} from './CartPage.styles'
 
-const Stack = styled.div`
-  display: grid;
-  gap: 18px;
-`
+function mergeCartData(cartRows, summaryRows) {
+  const quantityByBookId = new Map()
+  const cartIdByBookId = new Map()
 
-const Layout = styled.div`
-  display: grid;
-  gap: 18px;
-
-  @media (min-width: 980px) {
-    grid-template-columns: minmax(0, 1fr) 340px;
-    align-items: start;
+  for (const row of cartRows || []) {
+    const key = Number(row?.book_id)
+    if (!Number.isFinite(key)) continue
+    quantityByBookId.set(key, Number(row?.quantity || 0))
+    cartIdByBookId.set(key, row?.id)
   }
-`
 
-const CartList = styled.section`
-  background: var(--surface-container-low);
-  border-radius: 20px;
-  padding: 16px;
-  display: grid;
-  gap: 14px;
-`
-
-const StateText = styled.p`
-  margin: 0;
-  color: var(--on-surface-variant);
-`
-
-const Actions = styled.div`
-  display: flex;
-  gap: 8px;
-`
-
-const Button = styled.button`
-  border: 0;
-  border-radius: 999px;
-  padding: 10px 14px;
-  background: var(--surface-container-high);
-`
+  return (summaryRows || []).map((row) => {
+    const key = Number(row?.book_id)
+    const quantity = quantityByBookId.get(key) ?? Number(row?.quantity || 0)
+    return {
+      ...row,
+      quantity,
+      cart_id: cartIdByBookId.get(key) ?? row?.id,
+    }
+  })
+}
 
 export function CartPage() {
+  const { isAuthenticated } = useAuth()
   const [items, setItems] = useState([])
-  const [summary, setSummary] = useState({ subtotal: 0, shipping: 0, tax: 0 })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [busyItemId, setBusyItemId] = useState(null)
   const [error, setError] = useState('')
 
-  async function loadCart() {
+  const loadCart = useCallback(async () => {
+    if (!isAuthenticated) return
     try {
       setLoading(true)
       setError('')
-      const [cartRes, summaryRes] = await Promise.all([cartApi.get(), cartApi.summary()])
-      setItems(cartRes?.data?.items || cartRes?.items || cartRes?.data || cartRes || [])
-      const sum = summaryRes?.data || summaryRes || {}
-      setSummary({
-        subtotal: Number(sum.subtotal || 0),
-        shipping: Number(sum.shipping || 0),
-        tax: Number(sum.tax || 0),
-      })
+      const [cartRows, summaryRows] = await Promise.all([cartApi.get(), cartApi.summary()])
+      setItems(mergeCartData(cartRows, summaryRows))
     } catch (e) {
-      setError(e.message || 'Không tải được giỏ hàng')
+      setError(e.message || 'Failed to load cart')
     } finally {
       setLoading(false)
     }
-  }
+  }, [isAuthenticated])
 
   useEffect(() => {
+    if (!isAuthenticated) return
     const timer = setTimeout(() => {
       void loadCart()
     }, 0)
     return () => clearTimeout(timer)
-  }, [])
+  }, [isAuthenticated, loadCart])
 
-  async function handleAdd() {
-    await cartApi.add({ book_id: 1, qty: 1 })
-    await loadCart()
+  async function updateQuantity(item, nextQty) {
+    const cartId = item?.cart_id
+    if (!cartId || nextQty < 1) return
+
+    try {
+      setBusyItemId(cartId)
+      setError('')
+      await cartApi.update(cartId, { quantity: nextQty })
+      await loadCart()
+    } catch (e) {
+      setError(e.message || 'Failed to update quantity')
+    } finally {
+      setBusyItemId(null)
+    }
   }
 
-  async function handleUpdate() {
-    if (!items[0]?.id) return
-    await cartApi.update(items[0].id, { qty: (items[0].qty || 1) + 1 })
-    await loadCart()
+  async function removeItem(item) {
+    const cartId = item?.cart_id
+    if (!cartId) return
+
+    try {
+      setBusyItemId(cartId)
+      setError('')
+      await cartApi.remove(cartId)
+      await loadCart()
+    } catch (e) {
+      setError(e.message || 'Failed to remove item')
+    } finally {
+      setBusyItemId(null)
+    }
   }
 
-  async function handleDelete() {
-    if (!items[0]?.id) return
-    await cartApi.remove(items[0].id)
-    await loadCart()
-  }
+  const summary = useMemo(() => {
+    const subtotal = items.reduce((acc, item) => acc + Number(item?.price || 0) * Number(item?.quantity || 0), 0)
+    const itemCount = items.reduce((acc, item) => acc + Number(item?.quantity || 0), 0)
+    return { subtotal, shipping: 0, tax: 0, itemCount }
+  }, [items])
 
   return (
     <Stack>
       <Section>
-        <TopBar />
-        <SectionTitle>Giỏ hàng</SectionTitle>
-        <SectionSub>Chọn sách yêu thích, kiểm tra tổng chi phí trước khi thanh toán.</SectionSub>
-        <Actions>
-          <Button onClick={handleAdd}>Add</Button>
-          <Button onClick={handleUpdate}>Update</Button>
-          <Button onClick={handleDelete}>Delete</Button>
-        </Actions>
+        <HeadRow>
+          <div>
+            <SectionTitle>Cart</SectionTitle>
+            <SectionSub>Mapped from `/cart` + `/cart/summary` contracts, with exact stock and price lines.</SectionSub>
+          </div>
+          <RetryButton type="button" onClick={() => void loadCart()} disabled={!isAuthenticated || loading}>Refresh</RetryButton>
+        </HeadRow>
       </Section>
 
       <Layout>
         <CartList aria-label="Cart items">
-          {loading && <StateText>Đang tải giỏ hàng...</StateText>}
-          {!loading && error && <StateText>Lỗi: {error}</StateText>}
-          {!loading && !error && items.length === 0 && <StateText>Giỏ hàng trống.</StateText>}
-          {!loading && !error && items.map((item) => <CartItem key={item.id} item={item} />)}
+          {!isAuthenticated && (
+            <>
+              <StateText>Please login to manage cart.</StateText>
+              <LoginCta to="/auth/login">Login Required</LoginCta>
+            </>
+          )}
+          {loading && <StateText>Loading cart...</StateText>}
+          {!loading && error && <StateText role="alert">Error: {error}</StateText>}
+          {!loading && !error && isAuthenticated && items.length === 0 && <StateText>Cart is empty.</StateText>}
+          {!loading && !error && items.map((item, idx) => (
+            <CartItem
+              key={item.cart_id || item.id || `item-${idx}`}
+              item={item}
+              busy={busyItemId === (item.cart_id || item.id)}
+              onIncrease={(row) => void updateQuantity(row, Number(row.quantity || 0) + 1)}
+              onDecrease={(row) => void updateQuantity(row, Number(row.quantity || 0) - 1)}
+              onRemove={(row) => void removeItem(row)}
+            />
+          ))}
         </CartList>
-        <OrderSummary subtotal={summary.subtotal} shipping={summary.shipping} tax={summary.tax} />
+        <OrderSummary
+          subtotal={summary.subtotal}
+          shipping={summary.shipping}
+          tax={summary.tax}
+          itemCount={summary.itemCount}
+          disabled={!isAuthenticated || items.length === 0}
+        />
       </Layout>
     </Stack>
   )

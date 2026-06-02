@@ -1,53 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
-import styled from 'styled-components'
 import { booksApi } from '../api/books'
 import { categoriesApi } from '../api/categories'
 import { Section, SectionSub, SectionTitle } from '../components/Section'
-
-const Wrap = styled.div`
-  display: grid;
-  gap: 18px;
-`
-
-const Search = styled.input`
-  width: 100%;
-  border: 0;
-  border-radius: 14px;
-  padding: 14px;
-  font-size: 0.98rem;
-  background: var(--surface-container-high);
-  color: var(--on-surface);
-`
-
-const Grid = styled.div`
-  display: grid;
-  gap: 14px;
-
-  @media (min-width: 760px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-`
-
-const Item = styled.article`
-  border-radius: 16px;
-  background: var(--surface-container-lowest);
-  padding: 14px;
-`
-
-const H3 = styled.h3`
-  margin: 0;
-  font-family: var(--font-display);
-`
-
-const P = styled.p`
-  margin: 6px 0 0;
-  color: var(--on-surface-variant);
-`
-
-const StateText = styled.p`
-  margin: 0;
-  color: var(--on-surface-variant);
-`
+import { ProductCard } from '../components/product/ProductCard'
+import {
+  Wrap,
+  SearchShell,
+  Search,
+  Grid,
+  Books,
+  CategoryItem,
+  H3,
+  P,
+  StateText,
+  RetryButton
+} from './CatalogPage.styles'
 
 export function CatalogPage() {
   const [search, setSearch] = useState('')
@@ -56,24 +23,28 @@ export function CatalogPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true)
-        setError('')
-        const [booksRes, categoriesRootsRes] = await Promise.all([
-          booksApi.list(),
-          categoriesApi.listRoots().catch(() => categoriesApi.list()),
-        ])
-        setBooks(booksRes?.data || booksRes || [])
-        setCategories(categoriesRootsRes?.data || categoriesRootsRes || [])
-      } catch (e) {
-        setError(e.message || 'Không tải được dữ liệu')
-      } finally {
-        setLoading(false)
-      }
+  async function load() {
+    try {
+      setLoading(true)
+      setError('')
+      const [booksRes, categoriesRootsRes] = await Promise.all([
+        booksApi.list(),
+        categoriesApi.listRoots().catch(() => categoriesApi.list()),
+      ])
+      setBooks(booksRes?.data || [])
+      setCategories(categoriesRootsRes || [])
+    } catch (e) {
+      setError(e.message || 'Failed to load data')
+    } finally {
+      setLoading(false)
     }
-    load()
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void load()
+    }, 0)
+    return () => clearTimeout(timer)
   }, [])
 
   const filteredBooks = useMemo(() => {
@@ -85,42 +56,56 @@ export function CatalogPage() {
   return (
     <Wrap>
       <Section>
-        <SectionTitle>Danh mục & Tìm kiếm</SectionTitle>
-        <SectionSub>Tìm theo chủ đề, tác giả, bộ sưu tập tuyển chọn.</SectionSub>
-        <Search placeholder="Tìm sách, tác giả, từ khóa..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        <SectionTitle>Catalog & Search</SectionTitle>
+        <SectionSub>Filter by title and author, then jump directly to book detail view.</SectionSub>
+        <SearchShell>
+          <Search
+            placeholder="Search books, authors, keywords..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search books"
+          />
+        </SearchShell>
       </Section>
 
       <Section>
-        <SectionTitle>Chủ đề</SectionTitle>
-        {loading && <StateText>Đang tải danh mục...</StateText>}
-        {!loading && error && <StateText>Lỗi: {error}</StateText>}
-        {!loading && !error && categories.length === 0 && <StateText>Không có danh mục.</StateText>}
-        {!loading && !error && (
+        <SectionTitle>Topics</SectionTitle>
+        {loading && <StateText>Loading categories...</StateText>}
+        {!loading && error && (
+          <>
+            <StateText role="alert">Error: {error}</StateText>
+            <RetryButton type="button" onClick={() => void load()}>Retry</RetryButton>
+          </>
+        )}
+        {!loading && !error && categories.length === 0 && <StateText>No categories available.</StateText>}
+        {!loading && !error && categories.length > 0 && (
           <Grid>
             {categories.map((item) => (
-              <Item key={item.id || item.slug || item.name}>
+              <CategoryItem key={item.id || item.slug || item.name}>
                 <H3>{item.name}</H3>
-                <P>{item.description || 'Danh mục sách.'}</P>
-              </Item>
+                <P>{item.description || 'Curated category shelf.'}</P>
+              </CategoryItem>
             ))}
           </Grid>
         )}
       </Section>
 
       <Section>
-        <SectionTitle>Kết quả sách</SectionTitle>
-        {loading && <StateText>Đang tải sách...</StateText>}
-        {!loading && error && <StateText>Lỗi: {error}</StateText>}
-        {!loading && !error && filteredBooks.length === 0 && <StateText>Không có sách phù hợp.</StateText>}
+        <SectionTitle>Books</SectionTitle>
+        {loading && <StateText>Loading books...</StateText>}
+        {!loading && error && (
+          <>
+            <StateText role="alert">Error: {error}</StateText>
+            <RetryButton type="button" onClick={() => void load()}>Retry</RetryButton>
+          </>
+        )}
+        {!loading && !error && filteredBooks.length === 0 && <StateText>No matching books.</StateText>}
         {!loading && !error && filteredBooks.length > 0 && (
-          <Grid>
+          <Books>
             {filteredBooks.map((book, index) => (
-              <Item key={book.id || `${book.title}-${index}`}>
-                <H3>{book.title}</H3>
-                <P>{book.author}</P>
-              </Item>
+              <ProductCard book={book} key={book.id || `${book.title}-${index}`} />
             ))}
-          </Grid>
+          </Books>
         )}
       </Section>
     </Wrap>
