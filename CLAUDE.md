@@ -14,7 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **React Best Practices**: Follow performance optimization patterns (parallelize fetches, optimize re-renders, use proper hooks like `useMemo`/`useCallback` where expensive).
 - **Composition**: Prefer composition and compound components over boolean prop proliferation.
 - **Vite/React**: Use standard Vite + React (HMR) workflow. React 19 features preferred (e.g., direct `ref` prop passing).
-- **Execution Rule**: For implementation tasks, invoke Claude Code CLI and instruct Claude to perform coding work. Keep prompts concrete: scope, acceptance criteria, and required validation commands.
+- **Execution Rule**: For implementation tasks, prefer using sub-agents to perform coding work. Keep prompts concrete: scope, acceptance criteria, and required validation commands.
+- **Unicode Safety**: Preserve Vietnamese text as UTF-8. Do not rewrite source files through PowerShell `Set-Content`, shell pipes, or console output when editing Vietnamese strings; use `apply_patch` or byte-safe file writes to avoid mojibake.
 
 ## Architecture
 
