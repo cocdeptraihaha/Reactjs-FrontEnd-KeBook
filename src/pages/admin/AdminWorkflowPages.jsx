@@ -22,8 +22,24 @@ import {
   CancelRequestPanel,
   CancelRequestTitle,
   CancelRequestReason,
-  QuickActions
+  QuickActions,
+  FormGrid,
+  FormCard,
+  FormCardTitle,
+  FormRow,
+  FormGroup,
+  FormLabel,
+  FormInput,
+  FormButton,
+  BookPreviewPanel,
+  PreviewTitle,
+  ImageGallery,
+  ImageThumbnailCard,
+  GalleryImage,
+  ThumbnailBadge,
+  CheckboxWrapper
 } from './AdminWorkflowPages.styles'
+import { Plus, Image as ImageIcon, BookOpen, Trash2, ArrowUp } from 'react-feather'
 
 export function AdminOrdersPage() {
   const s = useAsync(() => ordersApi.adminList(), [])
@@ -261,7 +277,7 @@ export function AdminAddBookPage() {
       })
       const newBookId = created?.id || created?.data?.id || null
       setBookId(newBookId)
-      setMsg(`Book created${newBookId ? ` (#${newBookId})` : ''}`)
+      setMsg(`Book created (#${newBookId}) successfully!`)
       if (newBookId) await loadImages(newBookId)
     } catch (x) { setError(x.message || 'Create failed') }
   }
@@ -321,42 +337,174 @@ export function AdminAddBookPage() {
     } catch (x) { setError(x.message || 'Delete image failed') }
   }
 
-  const preview = useMemo(() => `${form.title || 'Untitled'} - ${form.author || 'Unknown'}`, [form.title, form.author])
-  return <Wrap><Section><SectionTitle>Admin Add Book</SectionTitle><SectionSub>{preview}</SectionSub><Input placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /><Input placeholder="Author" value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} /><Input placeholder="Selling price" value={form.selling_price} onChange={(e) => setForm({ ...form, selling_price: e.target.value })} /><Input placeholder="Stock quantity" value={form.stock_quantity} onChange={(e) => setForm({ ...form, stock_quantity: e.target.value })} /><Input placeholder="Code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />{msg && <P>{msg}</P>}{error && <Alert role="alert">{error}</Alert>}<Btn type="button" onClick={submit}>Create Book</Btn></Section>
-  <Section>
-    <SectionTitle>Image Manager</SectionTitle>
-    <SectionSub>{bookId ? `Manage images for book #${bookId}` : 'Create book first, then manage multiple images.'}</SectionSub>
-    <Input placeholder="Image URL" value={imageForm.image_url} onChange={(e) => setImageForm({ ...imageForm, image_url: e.target.value })} />
-    <Row>
-      <Input placeholder="Sort order" value={imageForm.sort_order} onChange={(e) => setImageForm({ ...imageForm, sort_order: e.target.value })} />
-      <Input placeholder="Alt text" value={imageForm.alt_text} onChange={(e) => setImageForm({ ...imageForm, alt_text: e.target.value })} />
-    </Row>
-    <label>
-      <input type="checkbox" checked={imageForm.is_primary} onChange={(e) => setImageForm({ ...imageForm, is_primary: e.target.checked })} />
-      {' '}Set as primary
-    </label>
-    <Row>
-      <Btn type="button" onClick={addImage} disabled={!bookId}>Add Image</Btn>
-      <Btn type="button" onClick={() => void loadImages()} disabled={!bookId}>Refresh</Btn>
-    </Row>
-    <List>
-      {images.map((img) => (
-        <li
-          key={img.id}
-          draggable
-          onDragStart={() => setDragImageId(img.id)}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={() => void onDropImage(img.id)}
-        >
-          <P>{img.image_url}</P>
-          <P>sort: {img.sort_order} {img.is_primary ? '(primary)' : ''}</P>
-          <Row>
-            <Btn type="button" onClick={() => setPrimary(img.id)}>Set Primary</Btn>
-            <P>Drag to reorder</P>
-            <Btn type="button" onClick={() => removeImage(img.id)}>Delete</Btn>
-          </Row>
-        </li>
-      ))}
-    </List>
-  </Section></Wrap>
+  return (
+    <Container>
+      <PageTitle>Book Inventory Management</PageTitle>
+
+      <FormGrid>
+        {/* Left Side: Parameters card */}
+        <FormCard>
+          <FormCardTitle><BookOpen size={20} /> Create New Book Parameters</FormCardTitle>
+
+          <FormGroup>
+            <FormLabel>Book Title</FormLabel>
+            <FormInput
+              placeholder="e.g. Harry Potter and the Philosopher's Stone"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
+          </FormGroup>
+
+          <FormRow>
+            <FormGroup>
+              <FormLabel>Author</FormLabel>
+              <FormInput
+                placeholder="e.g. J. K. Rowling"
+                value={form.author}
+                onChange={(e) => setForm({ ...form, author: e.target.value })}
+              />
+            </FormGroup>
+            <FormGroup>
+              <FormLabel>Unique SKU Code</FormLabel>
+              <FormInput
+                placeholder="e.g. HP-001"
+                value={form.code}
+                onChange={(e) => setForm({ ...form, code: e.target.value })}
+              />
+            </FormGroup>
+          </FormRow>
+
+          <FormRow>
+            <FormGroup>
+              <FormLabel>Selling Price (VND)</FormLabel>
+              <FormInput
+                type="number"
+                placeholder="e.g. 150000"
+                value={form.selling_price}
+                onChange={(e) => setForm({ ...form, selling_price: e.target.value })}
+              />
+            </FormGroup>
+            <FormGroup>
+              <FormLabel>Initial Stock Quantity</FormLabel>
+              <FormInput
+                type="number"
+                placeholder="e.g. 50"
+                value={form.stock_quantity}
+                onChange={(e) => setForm({ ...form, stock_quantity: e.target.value })}
+              />
+            </FormGroup>
+          </FormRow>
+
+          {msg && <p style={{ color: '#10b981', fontWeight: 600, fontSize: '13px', margin: 0 }}>{msg}</p>}
+          {error && <p style={{ color: '#ef4444', fontWeight: 600, fontSize: '13px', margin: 0 }}>{error}</p>}
+
+          <FormButton type="button" onClick={submit} disabled={!form.title || !form.author}>
+            Create Book Entry
+          </FormButton>
+        </FormCard>
+
+        {/* Right Side: Image manager */}
+        <FormCard>
+          <FormCardTitle><ImageIcon size={20} /> Product Media Manager</FormCardTitle>
+          {!bookId ? (
+            <BookPreviewPanel>
+              <PreviewTitle>No Book Registered Yet</PreviewTitle>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+                Please fill in and create the book entry on the left side before adding images.
+              </p>
+            </BookPreviewPanel>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px' }}>
+                <p style={{ fontSize: '12px', color: '#166534', margin: 0, fontWeight: 600 }}>
+                  Active Book ID: #{bookId}
+                </p>
+                <p style={{ fontSize: '11px', color: '#15803d', margin: '4px 0 0 0' }}>
+                  Title: {form.title}
+                </p>
+              </div>
+
+              <FormGroup>
+                <FormLabel>Image Link (URL)</FormLabel>
+                <FormInput
+                  placeholder="https://example.com/image.png"
+                  value={imageForm.image_url}
+                  onChange={(e) => setImageForm({ ...imageForm, image_url: e.target.value })}
+                />
+              </FormGroup>
+
+              <FormRow>
+                <FormGroup>
+                  <FormLabel>Alt Text</FormLabel>
+                  <FormInput
+                    placeholder="e.g. Cover design"
+                    value={imageForm.alt_text}
+                    onChange={(e) => setImageForm({ ...imageForm, alt_text: e.target.value })}
+                  />
+                </FormGroup>
+                <FormGroup>
+                  <FormLabel>Sort Order</FormLabel>
+                  <FormInput
+                    type="number"
+                    value={imageForm.sort_order}
+                    onChange={(e) => setImageForm({ ...imageForm, sort_order: e.target.value })}
+                  />
+                </FormGroup>
+              </FormRow>
+
+              <CheckboxWrapper>
+                <input
+                  type="checkbox"
+                  checked={imageForm.is_primary}
+                  onChange={(e) => setImageForm({ ...imageForm, is_primary: e.target.checked })}
+                />
+                Mark as Primary Book Cover
+              </CheckboxWrapper>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <ActionButton style={{ flex: 1 }} onClick={addImage}>
+                  Add Media
+                </ActionButton>
+                <ActionButton style={{ backgroundColor: '#475569' }} onClick={() => loadImages()}>
+                  Sync
+                </ActionButton>
+              </div>
+
+              <ImageGallery>
+                {images.map((img) => (
+                  <ImageThumbnailCard
+                    key={img.id}
+                    $isPrimary={img.is_primary}
+                    draggable
+                    onDragStart={() => setDragImageId(img.id)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => onDropImage(img.id)}
+                  >
+                    {img.is_primary && <ThumbnailBadge>Cover</ThumbnailBadge>}
+                    <GalleryImage src={img.image_url} alt={img.alt_text || 'book image'} />
+                    <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
+                      <ActionButton
+                        style={{ padding: '4px', fontSize: '10px', flex: 1, backgroundColor: '#8b5cf6' }}
+                        title="Set Primary"
+                        onClick={() => setPrimary(img.id)}
+                      >
+                        <ArrowUp size={12} />
+                      </ActionButton>
+                      <ActionButton
+                        style={{ padding: '4px', fontSize: '10px', backgroundColor: '#ef4444' }}
+                        title="Delete"
+                        onClick={() => removeImage(img.id)}
+                      >
+                        <Trash2 size={12} />
+                      </ActionButton>
+                    </div>
+                  </ImageThumbnailCard>
+                ))}
+              </ImageGallery>
+            </div>
+          )}
+        </FormCard>
+      </FormGrid>
+    </Container>
+  )
 }
