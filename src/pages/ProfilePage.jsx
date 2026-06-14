@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useForm, useWatch } from 'react-hook-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -16,7 +16,6 @@ import {
   Package,
   Phone,
   Plus,
-  RotateCcw,
   Save,
   Star,
   Tag,
@@ -170,12 +169,35 @@ const emptyAddress = {
   is_default: false,
 }
 
+function normalizeLocationName(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+}
+
+function findLocationOption(options, currentValue) {
+  const normalizedValue = normalizeLocationName(currentValue)
+  if (!normalizedValue) return null
+
+  return (options || []).find((option) => {
+    const code = String(option?.code || option?.id || '')
+    return (
+      String(option?.name || '') === String(currentValue || '') ||
+      code === String(currentValue || '') ||
+      normalizeLocationName(option?.name) === normalizedValue
+    )
+  }) || null
+}
+
 export function ProfilePage() {
   const { user, logout, token } = useAuth()
   const queryClient = useQueryClient()
   const [editingProfile, setEditingProfile] = useState(false)
   const [editingAddress, setEditingAddress] = useState(null)
   const [showAddressForm, setShowAddressForm] = useState(false)
+  const pendingAddressLocationRef = useRef(null)
   const [localAvatarPreview, setLocalAvatarPreview] = useState('')
   const [uploadError, setUploadError] = useState('')
 
@@ -227,7 +249,12 @@ export function ProfilePage() {
 
   const addressForm = useForm({ defaultValues: emptyAddress })
   const selectedProvince = useWatch({ control: addressForm.control, name: 'province' })
-  const selectedProvinceCode = provincesQuery.data?.find((item) => item.name === selectedProvince)?.code
+  const selectedWard = useWatch({ control: addressForm.control, name: 'ward' })
+  const selectedProvinceOption = useMemo(
+    () => findLocationOption(provincesQuery.data, selectedProvince),
+    [provincesQuery.data, selectedProvince],
+  )
+  const selectedProvinceCode = selectedProvinceOption?.code || selectedProvinceOption?.id
 
   const wardsQuery = useQuery({
     queryKey: ['address-wards', selectedProvinceCode],
@@ -239,6 +266,39 @@ export function ProfilePage() {
   useEffect(() => () => {
     if (localAvatarPreview) URL.revokeObjectURL(localAvatarPreview)
   }, [localAvatarPreview])
+
+  useEffect(() => {
+    const pendingAddressLocation = pendingAddressLocationRef.current
+    if (!showAddressForm || !pendingAddressLocation || provincesQuery.isLoading) return
+    const provinceOption = findLocationOption(provincesQuery.data, pendingAddressLocation.province)
+    const provinceValue = provinceOption?.name || pendingAddressLocation.province || ''
+
+    addressForm.setValue('province', provinceValue, { shouldDirty: false, shouldValidate: true })
+    addressForm.setValue('ward', '', { shouldDirty: false, shouldValidate: false })
+
+    if (!provinceOption) {
+      addressForm.setValue('ward', pendingAddressLocation.ward || '', { shouldDirty: false, shouldValidate: true })
+      pendingAddressLocationRef.current = null
+    }
+  }, [addressForm, editingAddress?.id, provincesQuery.data, provincesQuery.isLoading, showAddressForm])
+
+  useEffect(() => {
+    const pendingAddressLocation = pendingAddressLocationRef.current
+    if (!showAddressForm || !pendingAddressLocation || !selectedProvinceCode) return
+    if (wardsQuery.isLoading || wardsQuery.isFetching) return
+
+    const wardOption = findLocationOption(wardsQuery.data, pendingAddressLocation.ward)
+    addressForm.setValue('ward', wardOption?.name || pendingAddressLocation.ward || '', { shouldDirty: false, shouldValidate: true })
+    pendingAddressLocationRef.current = null
+  }, [
+    addressForm,
+    editingAddress?.id,
+    selectedProvinceCode,
+    showAddressForm,
+    wardsQuery.data,
+    wardsQuery.isFetching,
+    wardsQuery.isLoading,
+  ])
 
   const saveProfileMutation = useMutation({
     mutationFn: async (values) => {
@@ -298,11 +358,13 @@ export function ProfilePage() {
   function closeAddressForm() {
     setEditingAddress(null)
     setShowAddressForm(false)
+    pendingAddressLocationRef.current = null
     addressForm.reset(emptyAddress)
   }
 
   function openNewAddressForm() {
     setEditingAddress(null)
+    pendingAddressLocationRef.current = null
     setShowAddressForm(true)
     addressForm.reset({
       ...emptyAddress,
@@ -315,14 +377,18 @@ export function ProfilePage() {
 
   function openEditAddressForm(address) {
     setEditingAddress(address)
+    pendingAddressLocationRef.current = {
+      province: address?.province || '',
+      ward: address?.ward || '',
+    }
     setShowAddressForm(true)
     addressForm.reset({
       label: address?.label || 'Home',
       recipient_name: address?.recipient_name || '',
       phone_number: address?.phone_number || '',
       address_detail: address?.address_detail || '',
-      province: address?.province || '',
-      ward: address?.ward || '',
+      province: '',
+      ward: '',
       is_default: Boolean(address?.is_default),
     })
   }
@@ -518,8 +584,8 @@ export function ProfilePage() {
                     <Label>Ward</Label>
                     <Select {...addressForm.register('ward', { required: 'Ward required' })}>
                       <option value="">{selectedProvinceCode ? 'Select ward' : 'Select province first'}</option>
-                      {addressForm.getValues('ward') && !wardsQuery.data?.some((ward) => ward.name === addressForm.getValues('ward')) && (
-                        <option value={addressForm.getValues('ward')}>{addressForm.getValues('ward')}</option>
+                      {selectedWard && !wardsQuery.data?.some((ward) => ward.name === selectedWard) && (
+                        <option value={selectedWard}>{selectedWard}</option>
                       )}
                       {wardsQuery.data?.map((ward) => (
                         <option key={ward.code || ward.name} value={ward.name}>{ward.name}</option>
@@ -641,10 +707,10 @@ export function ProfilePage() {
           <SidePanel>
             <SideLink to="/app/profile/points-history"><Clock size={28} /> History <ChevronRight size={22} /></SideLink>
             <SideLink to="/app/profile/my-vouchers"><Tag size={28} /> Vouchers <ChevronRight size={22} /></SideLink>
-            <SideLink to="/app/profile/return-requests"><RotateCcw size={28} /> Return request <ChevronRight size={22} /></SideLink>
             <SideLink to="/app/profile/support-ticket"><Headphones size={28} /> Support ticket <ChevronRight size={22} /></SideLink>
-            {String(user?.role || '').toUpperCase() === 'ADMIN' && (
+            {(user?.is_superuser === true || String(user?.role || '').toUpperCase() === 'ADMIN') && (
               <>
+                <SideLink to="/app/admin/dashboard"><Briefcase size={28} /> Admin dashboard <ChevronRight size={22} /></SideLink>
                 <SideLink to="/app/admin/orders"><Package size={28} /> Admin orders <ChevronRight size={22} /></SideLink>
                 <SideLink to="/app/admin/books/new"><MapPin size={28} /> Add book <ChevronRight size={22} /></SideLink>
               </>

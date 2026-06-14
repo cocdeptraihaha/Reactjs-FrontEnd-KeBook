@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { cartApi } from '../api/cart'
 import { useAuth } from '../auth/auth-store'
 import { CartItem } from '../components/CartItem'
@@ -68,6 +69,13 @@ export function CartPage() {
   async function updateQuantity(item, nextQty) {
     const cartId = item?.cart_id
     if (!cartId || nextQty < 1) return
+    const stock = Number(item?.stock_quantity || 0)
+    if (stock > 0 && nextQty > stock) {
+      const message = `Only ${stock} item${stock === 1 ? '' : 's'} available in stock.`
+      setError(message)
+      toast.error('Stock limit reached', { description: message })
+      return
+    }
 
     try {
       setBusyItemId(cartId)
@@ -75,7 +83,9 @@ export function CartPage() {
       await cartApi.update(cartId, { quantity: nextQty })
       await loadCart()
     } catch (e) {
-      setError(e.message || 'Failed to update quantity')
+      const message = e.message || 'Failed to update quantity'
+      setError(message)
+      toast.error('Cart update failed', { description: message })
     } finally {
       setBusyItemId(null)
     }

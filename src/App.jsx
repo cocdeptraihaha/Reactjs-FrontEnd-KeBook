@@ -12,6 +12,7 @@ import { OrderDetailPage, OrderHistoryPage } from './pages/OrdersPage'
 import {
   AdminAddBookPage,
   AdminOrdersPage,
+  AdminDashboardPage,
   AuthGatePage,
   CheckoutPage,
   FavoritesPage,
@@ -21,7 +22,6 @@ import {
   PointsHistoryPage,
   RegisterPage,
   ResetPasswordPage,
-  ReturnRequestsPage,
   RewardsPage,
   SupportTicketPage,
   VerifyOtpPage,
@@ -64,7 +64,6 @@ function App() {
         <Route path="profile/points-history" element={<PointsHistoryPage />} />
         <Route path="profile/my-vouchers" element={<MyVouchersPage />} />
         <Route path="profile/rewards" element={<RewardsPage />} />
-        <Route path="profile/return-requests" element={<ReturnRequestsPage />} />
         <Route path="profile/support-ticket" element={<SupportTicketPage />} />
         <Route path="profile/write-review" element={<WriteReviewPage />} />
         <Route
@@ -72,6 +71,14 @@ function App() {
           element={(
             <RequireRole role="ADMIN">
               <AdminOrdersPage />
+            </RequireRole>
+          )}
+        />
+        <Route
+          path="admin/dashboard"
+          element={(
+            <RequireRole role="ADMIN">
+              <AdminDashboardPage />
             </RequireRole>
           )}
         />

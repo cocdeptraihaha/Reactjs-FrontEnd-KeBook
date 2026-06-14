@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { booksApi, pickPrimaryImage } from '../api/books'
 import { cartApi } from '../api/cart'
 import { reviewsApi } from '../api/reviews'
@@ -16,15 +17,26 @@ import {
   ThumbImg,
   BookTitle,
   Meta,
+  PriceRow,
+  CurrentPrice,
+  OriginalPrice,
   Actions,
   PrimaryBtn,
-  SecondaryBtn,
   StateText,
   RetryButton,
   ListCard,
   SimilarViewport,
   SimilarGrid,
 } from './BookDetailPage.styles'
+
+function asNumber(value, fallback = 0) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function formatVnd(value) {
+  return `${Number(value || 0).toLocaleString('vi-VN')} đ`
+}
 
 export function BookDetailPage() {
   const { id } = useParams()
@@ -105,13 +117,18 @@ export function BookDetailPage() {
       await cartApi.add({ book_id: Number(id), quantity: 1 })
       navigate('/app/cart')
     } catch (e) {
-      setActionError(e.message || 'Failed to add to cart')
+      const message = e.message || 'Cannot add more than available stock'
+      setActionError(message)
+      toast.error('Stock limit reached', { description: message })
     }
   }
 
   const rating = avg?.average || avg?.value || 'N/A'
   const resolvedPrimary = pickPrimaryImage(book)
   const displayImage = selectedImage || resolvedPrimary
+  const finalPrice = asNumber(book?.final_price ?? book?.selling_price ?? book?.price)
+  const originalPrice = asNumber(book?.original_price ?? book?.selling_price ?? book?.price)
+  const showOriginalPrice = originalPrice > finalPrice && finalPrice > 0
 
   return (
     <Wrap>
@@ -146,12 +163,15 @@ export function BookDetailPage() {
               <Meta>Author: {book.author || 'Unknown'}</Meta>
               <Meta>Format: {book.format || 'N/A'} | {book.pages || 'N/A'} pages</Meta>
               <Meta>Average rating: {rating}</Meta>
+              <PriceRow>
+                <CurrentPrice>{formatVnd(finalPrice)}</CurrentPrice>
+                {showOriginalPrice && <OriginalPrice>{formatVnd(originalPrice)}</OriginalPrice>}
+              </PriceRow>
               {actionError && <StateText role="alert">Error: {actionError}</StateText>}
               <Actions>
                 <PrimaryBtn type="button" onClick={handleAddToCart}>
                   {isAuthenticated ? 'Add to Cart' : 'Login to Add'}
                 </PrimaryBtn>
-                <SecondaryBtn to="/app/home">Back to Home</SecondaryBtn>
               </Actions>
             </>
           )}

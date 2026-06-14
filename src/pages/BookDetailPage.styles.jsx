@@ -91,6 +91,29 @@ export const Meta = styled.p`
   font-size: 0.95rem;
 `
 
+export const PriceRow = styled.div`
+  margin-top: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+`
+
+export const CurrentPrice = styled.p`
+  margin: 0;
+  color: var(--brand-900);
+  font-size: 1.35rem;
+  font-weight: 900;
+`
+
+export const OriginalPrice = styled.p`
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: line-through;
+`
+
 export const Actions = styled.div`
   margin-top: 12px;
   display: flex;

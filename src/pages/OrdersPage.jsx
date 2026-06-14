@@ -1,7 +1,9 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { cartApi } from '../api/cart'
 import { ordersApi } from '../api/orders'
+import { returnRequestsApi } from '../api/returnRequests'
 import { Section, SectionSub, SectionTitle } from '../components/Section'
 import {
   Wrap,
@@ -25,7 +27,14 @@ import {
   Footer,
   FooterText,
   Actions,
-  ActionBtn
+  ActionBtn,
+  ReturnPanel,
+  ReturnTitle,
+  ReturnGrid,
+  ReturnField,
+  ReturnSelect,
+  ReturnInput,
+  ReturnTextarea,
 } from './OrdersPage.styles'
 
 
@@ -98,6 +107,18 @@ function isDelivered(status) {
 
 function isTerminalComplete(status) {
   return status === 'DELIVERED' || status === 'COMPLETED'
+}
+
+function getReceivedDate(order) {
+  return order?.received_at || order?.completed_at || order?.delivered_at || order?.updated_at || order?.order_date
+}
+
+function canReturnOrder(order, status) {
+  if (status !== 'COMPLETED') return false
+  const receivedAt = new Date(getReceivedDate(order))
+  if (Number.isNaN(receivedAt.getTime())) return false
+  const elapsedMs = Date.now() - receivedAt.getTime()
+  return elapsedMs >= 0 && elapsedMs <= 14 * 24 * 60 * 60 * 1000
 }
 
 export function OrderHistoryPage() {
@@ -259,6 +280,10 @@ export function OrderDetailPage() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [returnItemId, setReturnItemId] = useState('')
+  const [returnQuantity, setReturnQuantity] = useState(1)
+  const [returnReason, setReturnReason] = useState('')
+  const [returnBusy, setReturnBusy] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -280,6 +305,38 @@ export function OrderDetailPage() {
 
   const status = normalizeStatus(order?.status)
   const items = Array.isArray(order?.order_items) ? order.order_items : []
+  const returnAllowed = canReturnOrder(order, status)
+  const selectedReturnItem = items.find((item) => String(item.id || item.order_item_id) === String(returnItemId))
+
+  async function submitReturnRequest(event) {
+    event.preventDefault()
+    if (!selectedReturnItem) {
+      toast.error('Chọn sản phẩm cần hoàn trả')
+      return
+    }
+    if (!returnReason.trim()) {
+      toast.error('Nhập lý do hoàn trả')
+      return
+    }
+
+    try {
+      setReturnBusy(true)
+      await returnRequestsApi.create({
+        order_id: Number(order.id),
+        order_item_id: Number(selectedReturnItem.id || selectedReturnItem.order_item_id),
+        quantity: Number(returnQuantity || 1),
+        reason: returnReason.trim(),
+      })
+      setReturnItemId('')
+      setReturnQuantity(1)
+      setReturnReason('')
+      toast.success('Đã gửi yêu cầu hoàn trả')
+    } catch (e) {
+      toast.error('Gửi yêu cầu hoàn trả thất bại', { description: e.message || 'Vui lòng thử lại' })
+    } finally {
+      setReturnBusy(false)
+    }
+  }
 
   return (
     <Wrap>
@@ -315,6 +372,43 @@ export function OrderDetailPage() {
               </ItemRow>
             ))}
           </ItemList>
+          {returnAllowed && (
+            <ReturnPanel onSubmit={submitReturnRequest}>
+              <ReturnTitle>Yêu cầu hoàn trả</ReturnTitle>
+              <ReturnGrid>
+                <ReturnField>
+                  Sản phẩm
+                  <ReturnSelect value={returnItemId} onChange={(event) => {
+                    const itemId = event.target.value
+                    setReturnItemId(itemId)
+                    setReturnQuantity(1)
+                  }}>
+                    <option value="">Chọn sản phẩm</option>
+                    {items.map((item, idx) => (
+                      <option key={item.id || item.order_item_id || `${order.id}-return-${idx}`} value={item.id || item.order_item_id}>
+                        {item.book_title || `Book #${item.book_id || '-'}`}
+                      </option>
+                    ))}
+                  </ReturnSelect>
+                </ReturnField>
+                <ReturnField>
+                  Số lượng
+                  <ReturnInput
+                    type="number"
+                    min="1"
+                    max={selectedReturnItem?.quantity || 1}
+                    value={returnQuantity}
+                    onChange={(event) => setReturnQuantity(event.target.value)}
+                  />
+                </ReturnField>
+                <ActionBtn type="submit" disabled={returnBusy}>Gửi return</ActionBtn>
+              </ReturnGrid>
+              <ReturnField>
+                Lý do
+                <ReturnTextarea value={returnReason} onChange={(event) => setReturnReason(event.target.value)} />
+              </ReturnField>
+            </ReturnPanel>
+          )}
           <Actions>
             <ActionBtn as={Link} to="/app/orders">Quay lại danh sách</ActionBtn>
           </Actions>
