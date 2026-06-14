@@ -4,12 +4,235 @@ import { ordersApi } from '../../api/orders'
 import { Section, SectionSub, SectionTitle } from '../../components/Section'
 import { useAsync } from '../../hooks/useAsync'
 import { Alert, Btn, Input, List, P, Row, Wrap } from '../WorkflowPages.styles'
+import {
+  Container,
+  PageTitle,
+  TableContainer,
+  AdminTable,
+  Th,
+  Td,
+  StatusBadge,
+  ItemsList,
+  ItemRow,
+  ItemThumbnail,
+  ActionGroup,
+  ActionSelect,
+  ActionButton,
+  InputDesc,
+  CancelRequestPanel,
+  CancelRequestTitle,
+  CancelRequestReason,
+  QuickActions
+} from './AdminWorkflowPages.styles'
 
 export function AdminOrdersPage() {
   const s = useAsync(() => ordersApi.adminList(), [])
-  const [statusById, setStatusById] = useState({})
-  async function update(id) { await ordersApi.adminUpdateStatus(id, { status: statusById[id] || 'CONFIRMED' }); await s.reload() }
-  return <Wrap><Section><SectionTitle>Admin Orders</SectionTitle><List>{(s.data || []).map((o) => <li key={o.id}>#{o.id} - {o.status}<Row><Input placeholder="Status" value={statusById[o.id] || ''} onChange={(e) => setStatusById({ ...statusById, [o.id]: e.target.value })} /><Btn type="button" onClick={() => update(o.id)}>Update</Btn></Row></li>)}</List></Section></Wrap>
+  const [selectedStatus, setSelectedStatus] = useState({})
+  const [statusDesc, setStatusDesc] = useState({})
+  const [updatingId, setUpdatingId] = useState(null)
+
+  const formatCurrency = (val) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0)
+  }
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return ''
+    return new Date(dateStr).toLocaleString('vi-VN')
+  }
+
+  async function updateStatus(id) {
+    const status = selectedStatus[id]
+    if (!status) return
+    try {
+      setUpdatingId(id)
+      await ordersApi.adminUpdateStatus(id, {
+        status,
+        description: statusDesc[id] || `Admin changed status to ${status}`
+      })
+      await s.reload()
+      setStatusDesc(prev => ({ ...prev, [id]: '' }))
+    } catch (err) {
+      alert(err.message || 'Failed to update order status')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  async function resolveCancel(id, approve) {
+    try {
+      setUpdatingId(id)
+      const desc = statusDesc[id] || (approve ? 'Admin approved cancellation request.' : 'Admin rejected cancellation request.')
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'}/orders/admin/${id}/cancel-decision`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ approve, description: desc })
+      })
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.detail || 'Failed to resolve cancel request')
+      }
+      await s.reload()
+      setStatusDesc(prev => ({ ...prev, [id]: '' }))
+    } catch (err) {
+      alert(err.message || 'Failed to process cancellation decision')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  return (
+    <Container>
+      <PageTitle>Admin Order Approvals</PageTitle>
+      {s.loading && <p>Loading orders...</p>}
+      {s.error && <Alert>{s.error.message || 'Failed to load orders'}</Alert>}
+
+      {!s.loading && !s.error && (
+        <TableContainer>
+          <AdminTable>
+            <thead>
+              <tr>
+                <Th>ID / Date</Th>
+                <Th>Customer</Th>
+                <Th>Items Ordered</Th>
+                <Th>Total / Method</Th>
+                <Th>Status</Th>
+                <Th>Management Action</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {(s.data || []).length === 0 ? (
+                <tr>
+                  <Td colSpan={6} style={{ textAlign: 'center' }}>No orders found.</Td>
+                </tr>
+              ) : (
+                s.data.map((order) => {
+                  const currentStatus = order.status || 'PENDING'
+                  const activeTargetStatus = selectedStatus[order.id] || currentStatus
+
+                  return (
+                    <tr key={order.id}>
+                      <Td>
+                        <div style={{ fontWeight: 700, color: '#1e293b' }}>#{order.id}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                          {formatDate(order.order_date)}
+                        </div>
+                      </Td>
+                      <Td>
+                        <div style={{ fontWeight: 600 }}>{order.full_name || 'N/A'}</div>
+                        <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>
+                          {order.phone_number || 'No phone'}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', maxWidth: '200px', wordBreak: 'break-word' }}>
+                          {order.shipping_address || 'No shipping address'}
+                        </div>
+                        {order.note && (
+                          <div style={{ fontSize: '12px', color: '#b45309', marginTop: '4px', fontStyle: 'italic' }}>
+                            Note: {order.note}
+                          </div>
+                        )}
+                      </Td>
+                      <Td>
+                        <ItemsList>
+                          {(order.order_items || []).map((item, index) => (
+                            <ItemRow key={item.id || index}>
+                              {item.image_url && <ItemThumbnail src={item.image_url} alt={item.book_title} />}
+                              <div>
+                                <div style={{ fontWeight: 500 }}>{item.book_title || `Book ID: ${item.book_id}`}</div>
+                                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                                  Qty: {item.quantity} × {formatCurrency(item.price)}
+                                </div>
+                              </div>
+                            </ItemRow>
+                          ))}
+                        </ItemsList>
+                      </Td>
+                      <Td>
+                        <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                          {formatCurrency(order.total_price)}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                          Payment ID: {order.payment_id}
+                        </div>
+                      </Td>
+                      <Td>
+                        <StatusBadge $status={currentStatus}>{currentStatus}</StatusBadge>
+                        {order.tracking_number && (
+                          <div style={{ fontSize: '11px', color: '#475569', marginTop: '6px' }}>
+                            Track: {order.tracking_number} ({order.shipping_provider})
+                          </div>
+                        )}
+                      </Td>
+                      <Td>
+                        {currentStatus === 'CANCEL_REQUESTED' ? (
+                          <CancelRequestPanel>
+                            <CancelRequestTitle>Cancellation Requested</CancelRequestTitle>
+                            <CancelRequestReason>
+                              Reason: {order.note || 'User requested cancel'}
+                            </CancelRequestReason>
+                            <InputDesc
+                              placeholder="Optional action note"
+                              value={statusDesc[order.id] || ''}
+                              onChange={(e) => setStatusDesc({ ...statusDesc, [order.id]: e.target.value })}
+                            />
+                            <QuickActions>
+                              <ActionButton
+                                $variant="success"
+                                onClick={() => resolveCancel(order.id, true)}
+                                disabled={updatingId === order.id}
+                              >
+                                Approve Cancel
+                              </ActionButton>
+                              <ActionButton
+                                $variant="danger"
+                                onClick={() => resolveCancel(order.id, false)}
+                                disabled={updatingId === order.id}
+                              >
+                                Reject Request
+                              </ActionButton>
+                            </QuickActions>
+                          </CancelRequestPanel>
+                        ) : (
+                          <ActionGroup>
+                            <ActionSelect
+                              value={activeTargetStatus}
+                              onChange={(e) => setSelectedStatus({ ...selectedStatus, [order.id]: e.target.value })}
+                            >
+                              <option value="PENDING">PENDING</option>
+                              <option value="CONFIRMED">CONFIRMED</option>
+                              <option value="INPROGRESS">INPROGRESS</option>
+                              <option value="SHIPPED">SHIPPED</option>
+                              <option value="DELIVERED">DELIVERED</option>
+                              <option value="COMPLETED">COMPLETED</option>
+                              <option value="CANCELLED">CANCELLED</option>
+                              <option value="RETURNED">RETURNED</option>
+                            </ActionSelect>
+                            <InputDesc
+                              placeholder="Action note / reason"
+                              value={statusDesc[order.id] || ''}
+                              onChange={(e) => setStatusDesc({ ...statusDesc, [order.id]: e.target.value })}
+                            />
+                            <ActionButton
+                              onClick={() => updateStatus(order.id)}
+                              disabled={updatingId === order.id || activeTargetStatus === currentStatus}
+                            >
+                              Update Status
+                            </ActionButton>
+                          </ActionGroup>
+                        )}
+                      </Td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </AdminTable>
+        </TableContainer>
+      )}
+    </Container>
+  )
 }
 
 
