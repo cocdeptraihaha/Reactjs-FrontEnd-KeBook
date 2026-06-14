@@ -1,0 +1,429 @@
+import { useState, useEffect } from 'react'
+import {
+  TrendingUp,
+  DollarSign,
+  ShoppingBag,
+  Users,
+  BookOpen,
+  FileText,
+  Download,
+  Award
+} from 'react-feather'
+import { dashboardApi } from '../../api/dashboard'
+import {
+  Container,
+  Header,
+  Title,
+  FilterBar,
+  DateInput,
+  ExportButton,
+  MetricsGrid,
+  MetricCard,
+  MetricIconWrap,
+  MetricInfo,
+  MetricLabel,
+  MetricValue,
+  MainContentGrid,
+  Panel,
+  PanelTitle,
+  TopBooksList,
+  TopBookItem,
+  BookTitle,
+  BookMeta,
+  BookStat,
+  BookStatValue,
+  Table,
+  Th,
+  Td,
+  StatusBadge,
+  SecondaryGrid,
+  CategoryItem,
+  CustomerRow,
+  CustomerInfo,
+  CustomerName,
+  CustomerEmail,
+  CustomerValue,
+  LoadingWrap,
+  ErrorWrap,
+  GroupBySelect,
+  ChartContainer,
+  ChartRow,
+  ChartLabel,
+  ChartBarContainer,
+  ChartBarFill,
+  ChartValue,
+  VerticalChartContainer,
+  VerticalChartColumn,
+  VerticalBarFill,
+  VerticalBarLabel,
+  VerticalTooltip,
+  DonutChartGrid,
+  DonutCard,
+  DonutRingSvg,
+  DonutCircleBg,
+  DonutCircleFill,
+  DonutText,
+  RingWrapper
+} from './AdminDashboardPage.styles'
+
+export function AdminDashboardPage() {
+  const [fromDate, setFromDate] = useState(() => {
+    const d = new Date()
+    d.setMonth(d.getMonth() - 1)
+    return d.toISOString().split('T')[0]
+  })
+  const [toDate, setToDate] = useState(() => {
+    return new Date().toISOString().split('T')[0]
+  })
+  const [groupBy, setGroupBy] = useState('day')
+
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [summary, setSummary] = useState(null)
+  const [topBooks, setTopBooks] = useState([])
+  const [categories, setCategories] = useState([])
+  const [topCustomers, setTopCustomers] = useState([])
+  const [orderStatus, setOrderStatus] = useState([])
+  const [revenueTimeseries, setRevenueTimeseries] = useState([])
+  const [userTimeseries, setUserTimeseries] = useState([])
+  const [cancellationTimeseries, setCancellationTimeseries] = useState([])
+
+  const formatCurrency = (val) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0)
+  }
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const params = { from: fromDate, to: toDate }
+        const timeseriesParams = { ...params, group_by: groupBy }
+
+        const [
+          summaryRes,
+          topBooksRes,
+          categoryRes,
+          customersRes,
+          statusRes,
+          revTimeseriesRes,
+          uTimeseriesRes,
+          cancelTimeseriesRes
+        ] = await Promise.all([
+          dashboardApi.getSummary(params),
+          dashboardApi.getTopBooks({ ...params, limit: 5, metric: 'revenue' }),
+          dashboardApi.getByCategory(params),
+          dashboardApi.getTopCustomers({ ...params, limit: 5 }),
+          dashboardApi.getOrderStatusBreakdown(params),
+          dashboardApi.getRevenueTimeseries(timeseriesParams),
+          dashboardApi.getUserTimeseries(timeseriesParams),
+          dashboardApi.getCancellationTimeseries(timeseriesParams)
+        ])
+
+        setSummary(summaryRes)
+        setTopBooks(topBooksRes || [])
+        setCategories(categoryRes || [])
+        setTopCustomers(customersRes || [])
+        setOrderStatus(statusRes || [])
+        setRevenueTimeseries(revTimeseriesRes || [])
+        setUserTimeseries(uTimeseriesRes || [])
+        setCancellationTimeseries(cancelTimeseriesRes || [])
+      } catch (err) {
+        setError(err.message || 'Failed to fetch dashboard statistics.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [fromDate, toDate, groupBy])
+
+  const csvUrl = dashboardApi.getRevenueCsvUrl({ from: fromDate, to: toDate, group_by: groupBy })
+
+  if (loading && !summary) {
+    return (
+      <Container>
+        <LoadingWrap>Loading dashboard data...</LoadingWrap>
+      </Container>
+    )
+  }
+
+  return (
+    <Container>
+      <Header>
+        <div>
+          <Title>Admin Dashboard</Title>
+        </div>
+        <FilterBar>
+          <GroupBySelect
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value)}
+            aria-label="Group By"
+          >
+            <option value="day">Daily</option>
+            <option value="week">Weekly</option>
+            <option value="month">Monthly</option>
+          </GroupBySelect>
+          <DateInput
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            aria-label="From Date"
+          />
+          <DateInput
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            aria-label="To Date"
+          />
+          <ExportButton href={csvUrl} download="revenue_timeseries.csv">
+            <Download size={16} /> Export Revenue CSV
+          </ExportButton>
+        </FilterBar>
+      </Header>
+
+      {error && <ErrorWrap>{error}</ErrorWrap>}
+
+      {/* Metrics Cards */}
+      <MetricsGrid>
+        <MetricCard>
+          <MetricIconWrap $bgColor="#ecfdf5" $iconColor="#10b981">
+            <DollarSign size={24} />
+          </MetricIconWrap>
+          <MetricInfo>
+            <MetricLabel>Total Revenue</MetricLabel>
+            <MetricValue>{formatCurrency(summary?.revenue)}</MetricValue>
+          </MetricInfo>
+        </MetricCard>
+
+        <MetricCard>
+          <MetricIconWrap $bgColor="#eff6ff" $iconColor="#3b82f6">
+            <ShoppingBag size={24} />
+          </MetricIconWrap>
+          <MetricInfo>
+            <MetricLabel>Orders</MetricLabel>
+            <MetricValue>{summary?.order_count || 0}</MetricValue>
+          </MetricInfo>
+        </MetricCard>
+
+        <MetricCard>
+          <MetricIconWrap $bgColor="#fdf2f8" $iconColor="#ec4899">
+            <BookOpen size={24} />
+          </MetricIconWrap>
+          <MetricInfo>
+            <MetricLabel>Pending Orders</MetricLabel>
+            <MetricValue>{summary?.pending_order_count || 0}</MetricValue>
+          </MetricInfo>
+        </MetricCard>
+
+        <MetricCard>
+          <MetricIconWrap $bgColor="#f5f3ff" $iconColor="#8b5cf6">
+            <Users size={24} />
+          </MetricIconWrap>
+          <MetricInfo>
+            <MetricLabel>New Customers</MetricLabel>
+            <MetricValue>{summary?.new_user_count || 0}</MetricValue>
+          </MetricInfo>
+        </MetricCard>
+      </MetricsGrid>
+
+      {/* Main Stats layout */}
+      <MainContentGrid>
+        {/* Order Status Breakdown Table */}
+        <Panel>
+          <PanelTitle><FileText size={18} /> Order Status Breakdown</PanelTitle>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Status</Th>
+                <Th>Order Count</Th>
+                <Th>Revenue</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {orderStatus.length === 0 ? (
+                <tr>
+                  <Td colSpan={3} style={{ textAlign: 'center' }}>No orders in selected range.</Td>
+                </tr>
+              ) : (
+                orderStatus.map((row, idx) => (
+                  <tr key={idx}>
+                    <Td><StatusBadge $status={row.status}>{row.status}</StatusBadge></Td>
+                    <Td>{row.count}</Td>
+                    <Td>{formatCurrency(row.revenue)}</Td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </Table>
+        </Panel>
+
+        {/* Best-selling Books list */}
+        <Panel>
+          <PanelTitle><TrendingUp size={18} /> Best Selling Books</PanelTitle>
+          <TopBooksList>
+            {topBooks.length === 0 ? (
+              <p style={{ textAlign: 'center', color: '#64748b' }}>No books sold.</p>
+            ) : (
+              topBooks.map((book) => (
+                <TopBookItem key={book.book_id}>
+                  <div>
+                    <BookTitle>{book.title || `Book ID: ${book.book_id}`}</BookTitle>
+                    <BookMeta>ID: {book.book_id}</BookMeta>
+                  </div>
+                  <BookStat>
+                    <BookStatValue>{formatCurrency(book.revenue)}</BookStatValue>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>Sold: {book.quantity_sold}</span>
+                  </BookStat>
+                </TopBookItem>
+              ))
+            )}
+          </TopBooksList>
+        </Panel>
+      </MainContentGrid>
+
+      <SecondaryGrid>
+        {/* Categories Distribution */}
+        <Panel>
+          <PanelTitle><Award size={18} /> Sales by Category</PanelTitle>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {categories.length === 0 ? (
+              <p style={{ textAlign: 'center', color: '#64748b' }}>No category stats available.</p>
+            ) : (
+              categories.map((cat, idx) => (
+                <CategoryItem key={idx}>
+                  <span style={{ fontWeight: 500, fontSize: '14px', color: '#334155' }}>{cat.category_name}</span>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a' }}>{formatCurrency(cat.revenue)}</div>
+                    <span style={{ fontSize: '11px', color: '#64748b' }}>Count: {cat.order_count}</span>
+                  </div>
+                </CategoryItem>
+              ))
+            )}
+          </div>
+        </Panel>
+
+        {/* Top Customers list */}
+        <Panel>
+          <PanelTitle><Users size={18} /> Top Customers</PanelTitle>
+          <div>
+            {topCustomers.length === 0 ? (
+              <p style={{ textAlign: 'center', color: '#64748b' }}>No customers found.</p>
+            ) : (
+              topCustomers.map((cust, idx) => (
+                <CustomerRow key={idx}>
+                  <CustomerInfo>
+                    <CustomerName>{cust.full_name || `User ID: ${cust.user_id}`}</CustomerName>
+                    <CustomerEmail>{cust.email}</CustomerEmail>
+                  </CustomerInfo>
+                  <CustomerValue>
+                    <div>{formatCurrency(cust.total_spent)}</div>
+                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>{cust.order_count} orders</span>
+                  </CustomerValue>
+                </CustomerRow>
+              ))
+            )}
+          </div>
+        </Panel>
+      </SecondaryGrid>
+
+      {/* Timeseries Analytics Charts */}
+      <Panel>
+        <PanelTitle><TrendingUp size={18} /> Sales & Revenue Timeline ({groupBy.toUpperCase()})</PanelTitle>
+        {revenueTimeseries.length === 0 ? (
+          <p style={{ textAlign: 'center', color: '#64748b', margin: '24px 0' }}>No data available for selected range.</p>
+        ) : (
+          (() => {
+            const maxRevenue = Math.max(...revenueTimeseries.map(r => r.revenue), 1)
+            return (
+              <VerticalChartContainer>
+                {revenueTimeseries.map((row, idx) => {
+                  const percentageHeight = `${(row.revenue / maxRevenue) * 90 + 10}%` // scale between 10% and 100% for visibility
+                  return (
+                    <VerticalChartColumn key={idx}>
+                      <VerticalTooltip $height={percentageHeight}>
+                        <div>{formatCurrency(row.revenue)}</div>
+                        <div style={{ fontSize: '9px', opacity: 0.8, textAlign: 'center' }}>{row.order_count} orders</div>
+                      </VerticalTooltip>
+                      <VerticalBarFill $color="#10b981" $height={percentageHeight} />
+                      <VerticalBarLabel title={row.period}>{row.period}</VerticalBarLabel>
+                    </VerticalChartColumn>
+                  )
+                })}
+              </VerticalChartContainer>
+            )
+          })()
+        )}
+      </Panel>
+
+      <SecondaryGrid>
+        {/* User Registration Timeline */}
+        <Panel>
+          <PanelTitle><Users size={18} /> Customer Signups Timeline ({groupBy.toUpperCase()})</PanelTitle>
+          {userTimeseries.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#64748b' }}>No data available.</p>
+          ) : (
+            (() => {
+              const maxNewUsers = Math.max(...userTimeseries.map(r => r.new_users), 1)
+              return (
+                <DonutChartGrid>
+                  {userTimeseries.slice(-4).map((row, idx) => { // limit to last 4 for clean radial display
+                    const ratio = Math.min(row.new_users / maxNewUsers, 1)
+                    // SVG circumference is 226 (r=36). Dashoffset is 226 * (1 - ratio)
+                    const offset = 226 * (1 - ratio)
+                    return (
+                      <DonutCard key={idx}>
+                        <RingWrapper>
+                          <DonutRingSvg>
+                            <DonutCircleBg cx="40" cy="40" r="36" />
+                            <DonutCircleFill
+                              cx="40"
+                              cy="40"
+                              r="36"
+                              $color="#8b5cf6"
+                              $offset={offset}
+                            />
+                          </DonutRingSvg>
+                          <DonutText>{row.new_users}</DonutText>
+                        </RingWrapper>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>{row.period}</div>
+                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>Signups</span>
+                      </DonutCard>
+                    )
+                  })}
+                </DonutChartGrid>
+              )
+            })()
+          )}
+        </Panel>
+
+        {/* Cancellation Rate Timeline */}
+        <Panel>
+          <PanelTitle><FileText size={18} /> Order Cancellation Rates ({groupBy.toUpperCase()})</PanelTitle>
+          <ChartContainer>
+            {cancellationTimeseries.length === 0 ? (
+              <p style={{ textAlign: 'center', color: '#64748b' }}>No data available.</p>
+            ) : (
+              (() => {
+                const maxCancelRate = Math.max(...cancellationTimeseries.map(r => r.cancel_rate), 1)
+                return cancellationTimeseries.map((row, idx) => (
+                  <ChartRow key={idx}>
+                    <ChartLabel>{row.period}</ChartLabel>
+                    <ChartBarContainer>
+                      <ChartBarFill $color="#f43f5e" $width={`${(row.cancel_rate / (maxCancelRate || 1)) * 100}%`} />
+                    </ChartBarContainer>
+                    <ChartValue>
+                      <div>{Math.round(row.cancel_rate * 100)}%</div>
+                      <span style={{ fontSize: '10px', color: '#64748b' }}>{row.cancelled_count}/{row.total_orders} orders</span>
+                    </ChartValue>
+                  </ChartRow>
+                ))
+              })()
+            )}
+          </ChartContainer>
+        </Panel>
+      </SecondaryGrid>
+    </Container>
+  )
+}
+export default AdminDashboardPage
