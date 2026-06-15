@@ -96,32 +96,25 @@ export function AdminDashboardPage() {
   }
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadStaticData = async () => {
       const isFirstTime = !summary
       try {
         if (isFirstTime) setLoading(true)
         setError(null)
         const params = { from: fromDate, to: toDate }
-        const timeseriesParams = { ...params, group_by: groupBy }
 
         const [
           summaryRes,
           topBooksRes,
           categoryRes,
           customersRes,
-          statusRes,
-          revTimeseriesRes,
-          uTimeseriesRes,
-          cancelTimeseriesRes
+          statusRes
         ] = await Promise.all([
           dashboardApi.getSummary(params),
           dashboardApi.getTopBooks({ ...params, limit: 5, metric: 'revenue' }),
           dashboardApi.getByCategory(params),
           dashboardApi.getTopCustomers({ ...params, limit: 5 }),
-          dashboardApi.getOrderStatusBreakdown(params),
-          dashboardApi.getRevenueTimeseries(timeseriesParams),
-          dashboardApi.getUserTimeseries(timeseriesParams),
-          dashboardApi.getCancellationTimeseries(timeseriesParams)
+          dashboardApi.getOrderStatusBreakdown(params)
         ])
 
         setSummary(summaryRes)
@@ -129,17 +122,42 @@ export function AdminDashboardPage() {
         setCategories(categoryRes || [])
         setTopCustomers(customersRes || [])
         setOrderStatus(statusRes || [])
-        setRevenueTimeseries(revTimeseriesRes || [])
-        setUserTimeseries(uTimeseriesRes || [])
-        setCancellationTimeseries(cancelTimeseriesRes || [])
       } catch (err) {
-        setError(err.message || 'Failed to fetch dashboard statistics.')
+        setError(err.message || 'Failed to fetch dashboard summary.')
       } finally {
         setLoading(false)
       }
     }
 
-    loadData()
+    loadStaticData()
+  }, [fromDate, toDate])
+
+  useEffect(() => {
+    const loadTimeseriesData = async () => {
+      try {
+        setError(null)
+        const params = { from: fromDate, to: toDate }
+        const timeseriesParams = { ...params, group_by: groupBy }
+
+        const [
+          revTimeseriesRes,
+          uTimeseriesRes,
+          cancelTimeseriesRes
+        ] = await Promise.all([
+          dashboardApi.getRevenueTimeseries(timeseriesParams),
+          dashboardApi.getUserTimeseries(timeseriesParams),
+          dashboardApi.getCancellationTimeseries(timeseriesParams)
+        ])
+
+        setRevenueTimeseries(revTimeseriesRes || [])
+        setUserTimeseries(uTimeseriesRes || [])
+        setCancellationTimeseries(cancelTimeseriesRes || [])
+      } catch (err) {
+        setError(err.message || 'Failed to fetch timeline analytics.')
+      }
+    }
+
+    loadTimeseriesData()
   }, [fromDate, toDate, groupBy])
 
   const csvUrl = dashboardApi.getRevenueCsvUrl({ from: fromDate, to: toDate, group_by: groupBy })
@@ -252,8 +270,8 @@ export function AdminDashboardPage() {
                   <Td colSpan={3} style={{ textAlign: 'center' }}>No orders in selected range.</Td>
                 </tr>
               ) : (
-                orderStatus.map((row, idx) => (
-                  <tr key={idx}>
+                orderStatus.map((row) => (
+                  <tr key={row.status}>
                     <Td><StatusBadge $status={row.status}>{row.status}</StatusBadge></Td>
                     <Td>{row.count}</Td>
                     <Td>{formatCurrency(row.revenue)}</Td>
@@ -296,8 +314,8 @@ export function AdminDashboardPage() {
             {categories.length === 0 ? (
               <p style={{ textAlign: 'center', color: '#64748b' }}>No category stats available.</p>
             ) : (
-              categories.map((cat, idx) => (
-                <CategoryItem key={idx}>
+              categories.map((cat) => (
+                <CategoryItem key={cat.category_id || cat.category_name}>
                   <span style={{ fontWeight: 500, fontSize: '14px', color: '#334155' }}>{cat.category_name}</span>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a' }}>{formatCurrency(cat.revenue)}</div>
@@ -316,8 +334,8 @@ export function AdminDashboardPage() {
             {topCustomers.length === 0 ? (
               <p style={{ textAlign: 'center', color: '#64748b' }}>No customers found.</p>
             ) : (
-              topCustomers.map((cust, idx) => (
-                <CustomerRow key={idx}>
+              topCustomers.map((cust) => (
+                <CustomerRow key={cust.user_id}>
                   <CustomerInfo>
                     <CustomerName>{cust.full_name || `User ID: ${cust.user_id}`}</CustomerName>
                     <CustomerEmail>{cust.email}</CustomerEmail>
@@ -343,10 +361,10 @@ export function AdminDashboardPage() {
             const maxRevenue = Math.max(...revenueTimeseries.map(r => r.revenue), 1)
             return (
               <VerticalChartContainer>
-                {revenueTimeseries.map((row, idx) => {
+                {revenueTimeseries.map((row) => {
                   const percentageHeight = `${(row.revenue / maxRevenue) * 90 + 10}%` // scale between 10% and 100% for visibility
                   return (
-                    <VerticalChartColumn key={idx}>
+                    <VerticalChartColumn key={row.period}>
                       <VerticalTooltip $height={percentageHeight}>
                         <div>{formatCurrency(row.revenue)}</div>
                         <div style={{ fontSize: '9px', opacity: 0.8, textAlign: 'center' }}>{row.order_count} orders</div>
@@ -373,12 +391,12 @@ export function AdminDashboardPage() {
               const maxNewUsers = Math.max(...userTimeseries.map(r => r.new_users), 1)
               return (
                 <DonutChartGrid>
-                  {userTimeseries.slice(-4).map((row, idx) => { // limit to last 4 for clean radial display
+                  {userTimeseries.slice(-4).map((row) => { // limit to last 4 for clean radial display
                     const ratio = Math.min(row.new_users / maxNewUsers, 1)
                     // SVG circumference is 226 (r=36). Dashoffset is 226 * (1 - ratio)
                     const offset = 226 * (1 - ratio)
                     return (
-                      <DonutCard key={idx}>
+                      <DonutCard key={row.period}>
                         <RingWrapper>
                           <DonutRingSvg viewBox="0 0 90 90">
                             <DonutCircleBg cx="45" cy="45" r="36" />
@@ -412,8 +430,8 @@ export function AdminDashboardPage() {
             ) : (
               (() => {
                 const maxCancelRate = Math.max(...cancellationTimeseries.map(r => r.cancel_rate), 1)
-                return cancellationTimeseries.map((row, idx) => (
-                  <ChartRow key={idx}>
+                return cancellationTimeseries.map((row) => (
+                  <ChartRow key={row.period}>
                     <ChartLabel>{row.period}</ChartLabel>
                     <ChartBarContainer>
                       <ChartBarFill $color="#f43f5e" $width={`${(row.cancel_rate / (maxCancelRate || 1)) * 100}%`} />
