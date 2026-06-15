@@ -2,23 +2,30 @@ import { useEffect, useState } from 'react'
 
 export function useAsync(task, deps = []) {
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [data, setData] = useState(null)
 
   async function run() {
     try {
-      setLoading(true)
+      if (data === null) {
+        setLoading(true)
+      } else {
+        setRefreshing(true)
+      }
       setError('')
-      setData(await task())
+      const result = await task()
+      setData(result)
     } catch (e) {
       setError(e.message || 'Request failed')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
   // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   useEffect(() => { void run() }, deps)
 
-  return { loading, error, data, reload: run, setData }
+  return { loading, refreshing, error, data, reload: run, setData }
 }
