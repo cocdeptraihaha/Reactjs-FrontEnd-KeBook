@@ -130,7 +130,7 @@ export function HomePage() {
   const [error, setError] = useState('')
   const [gridMode, setGridMode] = useState('medium')
   const [page, setPage] = useState(1)
-  const pageSize = 24
+  const pageSize = gridMode === 'medium' ? 25 : 24
 
   const colsByMode = {
     small: 6,
