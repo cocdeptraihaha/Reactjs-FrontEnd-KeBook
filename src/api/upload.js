@@ -41,4 +41,5 @@ async function uploadMultipart(path, file, token) {
 export const uploadApi = {
   avatar: (file, token) => uploadMultipart('/upload/avatar', file, token),
   bookDetailImage: (bookDetailId, file, token) => uploadMultipart(`/upload/book-detail/${bookDetailId}/image`, file, token),
+  generalImage: (file, token) => uploadMultipart('/upload/image', file, token),
 }

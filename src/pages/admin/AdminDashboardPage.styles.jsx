@@ -1,12 +1,27 @@
-import styled from 'styled-components'
+import styled, { keyframes } from 'styled-components'
+
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`
 
 export const Container = styled.div`
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 32px 24px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 32px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  animation: ${fadeIn} 0.5s ease-out;
+  background-color: #f8fafc;
+  min-height: 100vh;
 `
 
 export const Header = styled.div`
@@ -14,14 +29,17 @@ export const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 24px;
 `
 
 export const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 700;
-  color: #1e293b;
+  font-size: 32px;
+  font-weight: 800;
+  color: #0f172a;
   margin: 0;
+  letter-spacing: -0.025em;
 `
 
 export const FilterBar = styled.div`
@@ -32,80 +50,104 @@ export const FilterBar = styled.div`
 `
 
 export const DateInput = styled.input`
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
   border: 1px solid #cbd5e1;
   font-size: 14px;
+  font-weight: 500;
   outline: none;
   background-color: #ffffff;
   color: #334155;
-  transition: border-color 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
   }
 `
 
 export const GroupBySelect = styled.select`
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
   border: 1px solid #cbd5e1;
   font-size: 14px;
+  font-weight: 500;
   outline: none;
   background-color: #ffffff;
   color: #334155;
   cursor: pointer;
-  transition: border-color 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
   }
 `
-
 
 export const ExportButton = styled.a`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  background-color: #3b82f6;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: #ffffff;
   text-decoration: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-weight: 600;
   font-size: 14px;
-  transition: background-color 0.2s;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
+  transition: all 0.2s ease;
 
   &:hover {
-    background-color: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(79, 70, 229, 0.3);
+    filter: brightness(1.05);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `
 
 export const MetricsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
 `
 
 export const MetricCard = styled.div`
   background: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
+  border: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.08);
+    border-color: #cbd5e1;
+  }
 `
 
 export const MetricIconWrap = styled.div`
-  padding: 12px;
+  padding: 16px;
   background-color: ${props => props.$bgColor || '#eff6ff'};
   color: ${props => props.$iconColor || '#3b82f6'};
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.3s ease;
+
+  ${MetricCard}:hover & {
+    transform: scale(1.08);
+  }
 `
 
 export const MetricInfo = styled.div`
@@ -114,73 +156,91 @@ export const MetricInfo = styled.div`
 `
 
 export const MetricLabel = styled.span`
-  font-size: 13px;
+  font-size: 14px;
   color: #64748b;
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 `
 
 export const MetricValue = styled.span`
-  font-size: 20px;
-  font-weight: 700;
-  color: #1e293b;
-  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 6px;
+  letter-spacing: -0.02em;
 `
 
 export const MainContentGrid = styled.div`
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 24px;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 32px;
 
-  @media (max-width: 968px) {
+  @media (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
 `
 
 export const Panel = styled.div`
   background: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 `
 
 export const PanelTitle = styled.h2`
   font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0 0 16px 0;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 20px 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 14px;
 `
 
 export const TopBooksList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 `
 
 export const TopBookItem = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  border-radius: 8px;
+  padding: 16px;
+  border-radius: 12px;
   background: #f8fafc;
   border: 1px solid #f1f5f9;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    transform: translateX(4px);
+  }
 `
 
 export const BookTitle = styled.span`
-  font-weight: 600;
-  color: #334155;
+  font-weight: 700;
+  color: #1e293b;
   font-size: 14px;
+  display: block;
 `
 
 export const BookMeta = styled.span`
   font-size: 12px;
   color: #64748b;
-  margin-top: 2px;
+  margin-top: 4px;
   display: block;
+  font-weight: 500;
 `
 
 export const BookStat = styled.div`
@@ -190,9 +250,9 @@ export const BookStat = styled.div`
 `
 
 export const BookStatValue = styled.span`
-  font-weight: 700;
+  font-weight: 800;
   color: #0f172a;
-  font-size: 14px;
+  font-size: 15px;
 `
 
 export const Table = styled.table`
@@ -202,43 +262,49 @@ export const Table = styled.table`
 `
 
 export const Th = styled.th`
-  padding: 12px;
-  border-bottom: 2px solid #e2e8f0;
+  padding: 14px 16px;
+  border-bottom: 2px solid #f1f5f9;
   color: #475569;
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: #f8fafc;
 `
 
 export const Td = styled.td`
-  padding: 12px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
   color: #334155;
   font-size: 14px;
+  font-weight: 500;
 `
 
 export const StatusBadge = styled.span`
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
   background-color: ${props => {
     switch (props.$status) {
-      case 'DELIVERED': return '#dcfce7'
-      case 'CONFIRMED': return '#dbeafe'
-      case 'CANCELLED': return '#fee2e2'
-      case 'PENDING': return '#fef9c3'
-      default: return '#f1f5f9'
+      case 'DELIVERED': return '#ecfdf5'
+      case 'CONFIRMED': return '#eff6ff'
+      case 'CANCELLED': return '#fef2f2'
+      case 'PENDING': return '#fffbeb'
+      default: return '#f8fafc'
     }
   }};
   color: ${props => {
     switch (props.$status) {
-      case 'DELIVERED': return '#166534'
-      case 'CONFIRMED': return '#1e40af'
-      case 'CANCELLED': return '#991b1b'
-      case 'PENDING': return '#854d0e'
-      default: return '#475569'
+      case 'DELIVERED': return '#059669'
+      case 'CONFIRMED': return '#2563eb'
+      case 'CANCELLED': return '#dc2626'
+      case 'PENDING': return '#d97706'
+      default: return '#64748b'
     }
   }};
 `
@@ -246,9 +312,9 @@ export const StatusBadge = styled.span`
 export const SecondaryGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 32px;
 
-  @media (max-width: 968px) {
+  @media (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
 `
@@ -257,8 +323,13 @@ export const CategoryItem = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
+  padding: 14px 0;
   border-bottom: 1px dashed #e2e8f0;
+  transition: all 0.2s ease;
+
+  &:hover {
+    padding-left: 6px;
+  }
 
   &:last-child {
     border-bottom: none;
@@ -269,10 +340,19 @@ export const CustomerRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px;
-  border-radius: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
   background-color: #f8fafc;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    transform: translateY(-1px);
+  }
 
   &:last-child {
     margin-bottom: 0;
@@ -285,58 +365,65 @@ export const CustomerInfo = styled.div`
 `
 
 export const CustomerName = styled.span`
-  font-weight: 600;
-  color: #334155;
+  font-weight: 700;
+  color: #1e293b;
   font-size: 14px;
 `
 
 export const CustomerEmail = styled.span`
   font-size: 12px;
   color: #64748b;
+  margin-top: 2px;
+  font-weight: 500;
 `
 
 export const CustomerValue = styled.div`
   text-align: right;
-  font-weight: 700;
-  color: #1e293b;
+  font-weight: 800;
+  color: #0f172a;
   font-size: 14px;
 `
 
 export const LoadingWrap = styled.div`
-  padding: 40px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
   color: #64748b;
   font-size: 16px;
+  font-weight: 600;
+  gap: 12px;
 `
 
 export const ErrorWrap = styled.div`
-  padding: 24px;
-  background-color: #fee2e2;
+  padding: 16px 20px;
+  background-color: #fef2f2;
   border: 1px solid #fca5a5;
   color: #991b1b;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  margin-bottom: 24px;
 `
 
 export const ChartContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 16px;
+  gap: 20px;
+  margin-top: 20px;
 `
 
 export const ChartRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
 `
 
 export const ChartLabel = styled.div`
-  width: 100px;
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 500;
+  width: 110px;
+  font-size: 13px;
+  color: #475569;
+  font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -344,41 +431,41 @@ export const ChartLabel = styled.div`
 
 export const ChartBarContainer = styled.div`
   flex: 1;
-  height: 24px;
+  height: 28px;
   background-color: #f1f5f9;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
   position: relative;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 `
 
 export const ChartBarFill = styled.div`
   height: 100%;
-  background-color: ${props => props.$color || '#3b82f6'};
+  background: linear-gradient(90deg, #f43f5e 0%, #fda4af 100%);
   width: ${props => props.$width || '0%'};
-  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 6px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 8px;
 `
 
 export const ChartValue = styled.div`
-  font-size: 12px;
-  font-weight: 600;
-  color: #1e293b;
-  min-width: 80px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  min-width: 90px;
   text-align: right;
 `
 
-/* NEW: Vertical Column Chart Components */
 export const VerticalChartContainer = styled.div`
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  height: 240px;
-  padding: 16px 8px;
+  height: 280px;
+  padding: 24px 16px;
   background: #f8fafc;
-  border-radius: 12px;
+  border-radius: 16px;
   border: 1px solid #f1f5f9;
-  margin-top: 16px;
-  gap: 8px;
+  margin-top: 20px;
+  gap: 12px;
 `
 
 export const VerticalChartColumn = styled.div`
@@ -389,28 +476,27 @@ export const VerticalChartColumn = styled.div`
   height: 100%;
   justify-content: flex-end;
   position: relative;
-  group: hover;
 `
 
 export const VerticalBarFill = styled.div`
   width: 100%;
-  max-width: 32px;
+  max-width: 40px;
   height: ${props => props.$height || '0%'};
-  background-color: ${props => props.$color || '#10b981'};
-  border-radius: 6px 6px 0 0;
-  transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(180deg, #10b981 0%, #34d399 100%);
+  border-radius: 8px 8px 0 0;
+  transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 
   &:hover {
-    filter: brightness(0.9);
+    filter: brightness(0.95);
   }
 `
 
 export const VerticalBarLabel = styled.div`
-  font-size: 10px;
-  color: #64748b;
+  font-size: 11px;
+  color: #475569;
   font-weight: 600;
-  margin-top: 8px;
+  margin-top: 12px;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -420,54 +506,62 @@ export const VerticalBarLabel = styled.div`
 
 export const VerticalTooltip = styled.div`
   position: absolute;
-  bottom: calc(${props => props.$height || '0%'} + 12px);
+  bottom: calc(${props => props.$height || '0%'} + 16px);
   background: #0f172a;
   color: #ffffff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
   white-space: nowrap;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   z-index: 10;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease-in-out;
+  transform: translateY(4px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   ${VerticalChartColumn}:hover & {
     opacity: 1;
+    transform: translateY(0);
   }
 `
 
-/* NEW: Radial/Ring Progress Charts (Donut display) */
 export const DonutChartGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 16px;
-  margin-top: 16px;
+  gap: 20px;
+  margin-top: 20px;
 `
 
 export const DonutCard = styled.div`
   background: #f8fafc;
   border: 1px solid #f1f5f9;
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   text-align: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  }
 `
 
 export const DonutRingSvg = styled.svg`
-  width: 80px;
-  height: 80px;
+  width: 90px;
+  height: 90px;
   transform: rotate(-90deg);
 `
 
 export const DonutCircleBg = styled.circle`
   fill: none;
-  stroke: #e2e8f0;
+  stroke: #f1f5f9;
   stroke-width: 8;
 `
 
@@ -476,15 +570,15 @@ export const DonutCircleFill = styled.circle`
   stroke: ${props => props.$color || '#8b5cf6'};
   stroke-width: 8;
   stroke-linecap: round;
-  stroke-dasharray: 226; /* 2 * PI * r (where r is 36: 2 * 3.14159 * 36 = 226.19) */
+  stroke-dasharray: 226;
   stroke-dashoffset: ${props => props.$offset || '226'};
-  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 `
 
 export const DonutText = styled.div`
   position: absolute;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
   color: #0f172a;
 `
 
@@ -494,5 +588,3 @@ export const RingWrapper = styled.div`
   align-items: center;
   justify-content: center;
 `
-
-

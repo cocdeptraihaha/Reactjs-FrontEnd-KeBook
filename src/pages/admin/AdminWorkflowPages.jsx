@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
 import { booksApi } from '../../api/books'
 import { ordersApi } from '../../api/orders'
+import { uploadApi } from '../../api/upload'
+import { AdminNavbar } from '../../components/AdminNavbar'
+import { Dropdown } from '../../components/ui/Dropdown'
 import { Section, SectionSub, SectionTitle } from '../../components/Section'
 import { useAsync } from '../../hooks/useAsync'
 import { Alert, Btn, Input, List, P, Row, Wrap } from '../WorkflowPages.styles'
@@ -37,9 +40,14 @@ import {
   ImageThumbnailCard,
   GalleryImage,
   ThumbnailBadge,
-  CheckboxWrapper
+  CheckboxWrapper,
+  UploadDropzone,
+  UploadIconWrap,
+  UploadText,
+  UploadSubtext,
+  UploadProgressWrap
 } from './AdminWorkflowPages.styles'
-import { Plus, Image as ImageIcon, BookOpen, Trash2, ArrowUp } from 'react-feather'
+import { Plus, Image as ImageIcon, BookOpen, Trash2, ArrowUp, Upload } from 'react-feather'
 
 export function AdminOrdersPage() {
   const s = useAsync(() => ordersApi.adminList(), [])
@@ -100,8 +108,10 @@ export function AdminOrdersPage() {
   }
 
   return (
-    <Container>
-      <PageTitle>Admin Order Approvals</PageTitle>
+    <>
+      <AdminNavbar />
+      <Container>
+        <PageTitle>Admin Order Approvals</PageTitle>
       {s.loading && <p>Loading orders...</p>}
       {s.error && <Alert>{s.error.message || 'Failed to load orders'}</Alert>}
 
@@ -211,20 +221,22 @@ export function AdminOrdersPage() {
                             </QuickActions>
                           </CancelRequestPanel>
                         ) : (
-                          <ActionGroup>
-                            <ActionSelect
+                          <ActionGroup style={{ overflow: 'visible' }}>
+                            <Dropdown
                               value={activeTargetStatus}
-                              onChange={(e) => setSelectedStatus({ ...selectedStatus, [order.id]: e.target.value })}
-                            >
-                              <option value="PENDING">PENDING</option>
-                              <option value="CONFIRMED">CONFIRMED</option>
-                              <option value="INPROGRESS">INPROGRESS</option>
-                              <option value="SHIPPED">SHIPPED</option>
-                              <option value="DELIVERED">DELIVERED</option>
-                              <option value="COMPLETED">COMPLETED</option>
-                              <option value="CANCELLED">CANCELLED</option>
-                              <option value="RETURNED">RETURNED</option>
-                            </ActionSelect>
+                              onChange={(val) => setSelectedStatus({ ...selectedStatus, [order.id]: val })}
+                              options={[
+                                { value: 'PENDING', label: 'PENDING' },
+                                { value: 'CONFIRMED', label: 'CONFIRMED' },
+                                { value: 'INPROGRESS', label: 'INPROGRESS' },
+                                { value: 'SHIPPED', label: 'SHIPPED' },
+                                { value: 'DELIVERED', label: 'DELIVERED' },
+                                { value: 'COMPLETED', label: 'COMPLETED' },
+                                { value: 'CANCELLED', label: 'CANCELLED' },
+                                { value: 'RETURNED', label: 'RETURNED' }
+                              ]}
+                              width="100%"
+                            />
                             <InputDesc
                               placeholder="Action note / reason"
                               value={statusDesc[order.id] || ''}
@@ -248,6 +260,7 @@ export function AdminOrdersPage() {
         </TableContainer>
       )}
     </Container>
+    </>
   )
 }
 
@@ -260,6 +273,30 @@ export function AdminAddBookPage() {
   const [imageForm, setImageForm] = useState({ image_url: '', sort_order: 0, is_primary: false, alt_text: '' })
   const [msg, setMsg] = useState('')
   const [error, setError] = useState('')
+  const [uploading, setUploading] = useState(false)
+
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      setUploading(true)
+      setError('')
+      const token = localStorage.getItem('token')
+      const result = await uploadApi.generalImage(file, token)
+      if (result?.url) {
+        setImageForm(prev => ({
+          ...prev,
+          image_url: result.url,
+          alt_text: file.name.split('.')[0]
+        }))
+        setMsg('Image uploaded to Cloudinary successfully!')
+      }
+    } catch (err) {
+      setError(err.message || 'Image upload failed')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   async function loadImages(targetBookId = bookId) {
     if (!targetBookId) return
@@ -338,8 +375,10 @@ export function AdminAddBookPage() {
   }
 
   return (
-    <Container>
-      <PageTitle>Book Inventory Management</PageTitle>
+    <>
+      <AdminNavbar />
+      <Container>
+        <PageTitle>Book Inventory Management</PageTitle>
 
       <FormGrid>
         {/* Left Side: Parameters card */}
@@ -425,7 +464,79 @@ export function AdminAddBookPage() {
               </div>
 
               <FormGroup>
-                <FormLabel>Image Link (URL)</FormLabel>
+                <FormLabel>Book Cover Image</FormLabel>
+                {uploading ? (
+                  <UploadProgressWrap>
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      border: '2px solid #3b82f6',
+                      borderTopColor: 'transparent',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                    <span>Uploading your image to Cloudinary...</span>
+                  </UploadProgressWrap>
+                ) : (
+                  <label htmlFor="book-image-file">
+                    <UploadDropzone>
+                      <UploadIconWrap>
+                        <Upload size={24} />
+                      </UploadIconWrap>
+                      <UploadText>Click or drag image here to upload</UploadText>
+                      <UploadSubtext>Supports PNG, JPG, JPEG, WEBP up to 5MB</UploadSubtext>
+                      <input
+                        type="file"
+                        id="book-image-file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={handleFileUpload}
+                      />
+                    </UploadDropzone>
+                  </label>
+                )}
+              </FormGroup>
+
+              {imageForm.image_url && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '10px'
+                }}>
+                  <img
+                    src={imageForm.image_url}
+                    alt="Uploaded thumbnail preview"
+                    style={{
+                      width: '40px',
+                      height: '52px',
+                      objectFit: 'cover',
+                      borderRadius: '4px',
+                      border: '1px solid #cbd5e1'
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      Ready to add:
+                    </p>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#64748b', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      {imageForm.image_url}
+                    </p>
+                  </div>
+                  <ActionButton
+                    style={{ padding: '6px 10px', fontSize: '11px', backgroundColor: '#ef4444' }}
+                    onClick={() => setImageForm(prev => ({ ...prev, image_url: '' }))}
+                  >
+                    Clear
+                  </ActionButton>
+                </div>
+              )}
+
+              <FormGroup>
+                <FormLabel>Or enter Image Link (URL)</FormLabel>
                 <FormInput
                   placeholder="https://example.com/image.png"
                   value={imageForm.image_url}
@@ -506,5 +617,6 @@ export function AdminAddBookPage() {
         </FormCard>
       </FormGrid>
     </Container>
+    </>
   )
 }

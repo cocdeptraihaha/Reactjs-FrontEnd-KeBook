@@ -22,6 +22,7 @@ import {
   Trash2,
   User,
   X,
+  Shield,
 } from 'react-feather'
 import { addressesApi } from '../api/addresses'
 import { authApi } from '../api/auth'
@@ -64,6 +65,10 @@ import {
   SmallAction,
   SidePanel,
   SideLink,
+  AdminPromoCard,
+  AdminPromoTitle,
+  AdminPromoDesc,
+  AdminPromoBtn,
   FormPanel,
   FormTitle,
   FormGrid,
@@ -704,17 +709,22 @@ export function ProfilePage() {
         </Column>
 
         <Column>
+          {(user?.is_superuser === true || String(user?.role || '').toUpperCase() === 'ADMIN') && (
+            <AdminPromoCard>
+              <AdminPromoTitle><Shield size={24} /> Admin Workspace</AdminPromoTitle>
+              <AdminPromoDesc>
+                You have administrative privileges. Access the management panel to oversee orders, stock catalogs, and analyze business performance.
+              </AdminPromoDesc>
+              <AdminPromoBtn to="/app/admin/dashboard">
+                Go to Dashboard <ChevronRight size={16} />
+              </AdminPromoBtn>
+            </AdminPromoCard>
+          )}
+
           <SidePanel>
             <SideLink to="/app/profile/points-history"><Clock size={28} /> History <ChevronRight size={22} /></SideLink>
             <SideLink to="/app/profile/my-vouchers"><Tag size={28} /> Vouchers <ChevronRight size={22} /></SideLink>
             <SideLink to="/app/profile/support-ticket"><Headphones size={28} /> Support ticket <ChevronRight size={22} /></SideLink>
-            {(user?.is_superuser === true || String(user?.role || '').toUpperCase() === 'ADMIN') && (
-              <>
-                <SideLink to="/app/admin/dashboard"><Briefcase size={28} /> Admin dashboard <ChevronRight size={22} /></SideLink>
-                <SideLink to="/app/admin/orders"><Package size={28} /> Admin orders <ChevronRight size={22} /></SideLink>
-                <SideLink to="/app/admin/books/new"><MapPin size={28} /> Add book <ChevronRight size={22} /></SideLink>
-              </>
-            )}
           </SidePanel>
         </Column>
       </ProfileCanvas>

@@ -494,6 +494,74 @@ export const AccountShell = styled.div`
   gap: 16px;
 `
 
+export const AdminPromoCard = styled.div`
+  background: linear-gradient(135deg, #1e1b4b 0%, #311042 100%);
+  border: 1px solid #4c1d95;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%);
+    pointer-events: none;
+  }
+`
+
+export const AdminPromoTitle = styled.h3`
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: #f5f3ff;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`
+
+export const AdminPromoDesc = styled.p`
+  margin: 0;
+  font-size: 0.88rem;
+  color: #c084fc;
+  font-weight: 500;
+  line-height: 1.5;
+`
+
+export const AdminPromoBtn = styled(Link)`
+  align-self: flex-start;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  color: #ffffff;
+  padding: 12px 24px;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(139, 92, 246, 0.4);
+    filter: brightness(1.1);
+    color: #ffffff;
+  }
+`
+
 export const AccountGrid = styled.div`
   display: grid;
   gap: 16px;

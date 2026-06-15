@@ -9,6 +9,9 @@ import {
   Download,
   Award
 } from 'react-feather'
+import { AdminNavbar } from '../../components/AdminNavbar'
+import { Dropdown } from '../../components/ui/Dropdown'
+import { DateTimePicker } from '../../components/ui/DateTimePicker'
 import { dashboardApi } from '../../api/dashboard'
 import {
   Container,
@@ -94,8 +97,9 @@ export function AdminDashboardPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      const isFirstTime = !summary
       try {
-        setLoading(true)
+        if (isFirstTime) setLoading(true)
         setError(null)
         const params = { from: fromDate, to: toDate }
         const timeseriesParams = { ...params, group_by: groupBy }
@@ -149,32 +153,34 @@ export function AdminDashboardPage() {
   }
 
   return (
-    <Container>
-      <Header>
-        <div>
-          <Title>Admin Dashboard</Title>
-        </div>
+    <>
+      <AdminNavbar />
+      <Container>
+        <Header>
+          <div>
+            <Title>Admin Dashboard</Title>
+          </div>
         <FilterBar>
-          <GroupBySelect
+          <Dropdown
             value={groupBy}
-            onChange={(e) => setGroupBy(e.target.value)}
-            aria-label="Group By"
-          >
-            <option value="day">Daily</option>
-            <option value="week">Weekly</option>
-            <option value="month">Monthly</option>
-          </GroupBySelect>
-          <DateInput
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            aria-label="From Date"
+            onChange={(val) => setGroupBy(val)}
+            options={[
+              { value: 'day', label: 'Daily' },
+              { value: 'week', label: 'Weekly' },
+              { value: 'month', label: 'Monthly' },
+              { value: 'year', label: 'Yearly' }
+            ]}
+            width="140px"
           />
-          <DateInput
-            type="date"
+          <DateTimePicker
+            label="From"
+            value={fromDate}
+            onChange={(val) => setFromDate(val)}
+          />
+          <DateTimePicker
+            label="To"
             value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            aria-label="To Date"
+            onChange={(val) => setToDate(val)}
           />
           <ExportButton href={csvUrl} download="revenue_timeseries.csv">
             <Download size={16} /> Export Revenue CSV
@@ -374,11 +380,11 @@ export function AdminDashboardPage() {
                     return (
                       <DonutCard key={idx}>
                         <RingWrapper>
-                          <DonutRingSvg>
-                            <DonutCircleBg cx="40" cy="40" r="36" />
+                          <DonutRingSvg viewBox="0 0 90 90">
+                            <DonutCircleBg cx="45" cy="45" r="36" />
                             <DonutCircleFill
-                              cx="40"
-                              cy="40"
+                              cx="45"
+                              cy="45"
                               r="36"
                               $color="#8b5cf6"
                               $offset={offset}
@@ -386,8 +392,8 @@ export function AdminDashboardPage() {
                           </DonutRingSvg>
                           <DonutText>{row.new_users}</DonutText>
                         </RingWrapper>
-                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>{row.period}</div>
-                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>Signups</span>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>{row.period}</div>
+                        <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 500 }}>Signups</span>
                       </DonutCard>
                     )
                   })}
@@ -424,6 +430,7 @@ export function AdminDashboardPage() {
         </Panel>
       </SecondaryGrid>
     </Container>
+    </>
   )
 }
 export default AdminDashboardPage

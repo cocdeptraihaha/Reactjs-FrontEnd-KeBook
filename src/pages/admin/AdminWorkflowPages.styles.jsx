@@ -374,3 +374,53 @@ export const CheckboxWrapper = styled.label`
   }
 `
 
+export const UploadDropzone = styled.div`
+  border: 2px dashed ${props => props.$error ? '#ef4444' : '#3b82f6'};
+  background-color: ${props => props.$error ? '#fef2f2' : '#f0f9ff'};
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+
+  &:hover {
+    background-color: ${props => props.$error ? '#fee2e2' : '#e0f2fe'};
+  }
+`
+
+export const UploadIconWrap = styled.div`
+  color: ${props => props.$error ? '#ef4444' : '#3b82f6'};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`
+
+export const UploadText = styled.span`
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+`
+
+export const UploadSubtext = styled.span`
+  font-size: 11px;
+  color: #64748b;
+`
+
+export const UploadProgressWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  color: #334155;
+`
+
+
