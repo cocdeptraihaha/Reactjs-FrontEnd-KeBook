@@ -44,10 +44,10 @@ export function CartPage() {
   const [busyItemId, setBusyItemId] = useState(null)
   const [error, setError] = useState('')
 
-  const loadCart = useCallback(async () => {
+  const loadCart = useCallback(async (silent = false) => {
     if (!isAuthenticated) return
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       setError('')
       const [cartRows, summaryRows] = await Promise.all([cartApi.get(), cartApi.summary()])
       setItems(mergeCartData(cartRows, summaryRows))
@@ -61,7 +61,7 @@ export function CartPage() {
   useEffect(() => {
     if (!isAuthenticated) return
     const timer = setTimeout(() => {
-      void loadCart()
+      void loadCart(false)
     }, 0)
     return () => clearTimeout(timer)
   }, [isAuthenticated, loadCart])
@@ -81,7 +81,7 @@ export function CartPage() {
       setBusyItemId(cartId)
       setError('')
       await cartApi.update(cartId, { quantity: nextQty })
-      await loadCart()
+      await loadCart(true)
     } catch (e) {
       const message = e.message || 'Failed to update quantity'
       setError(message)
@@ -99,7 +99,7 @@ export function CartPage() {
       setBusyItemId(cartId)
       setError('')
       await cartApi.remove(cartId)
-      await loadCart()
+      await loadCart(true)
     } catch (e) {
       setError(e.message || 'Failed to remove item')
     } finally {
