@@ -26,7 +26,9 @@ import {
   GridModeBtn,
   Pager,
   PagerBtn,
-  PagerText
+  PagerText,
+  SearchShell,
+  Search
 } from './HomePage.styles'
 
 function asNumber(value, fallback = 0) {
@@ -127,9 +129,12 @@ export function HomePage() {
   const [bestSellerBooks, setBestSellerBooks] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
+  const [booksLoading, setBooksLoading] = useState(false)
   const [error, setError] = useState('')
   const [gridMode, setGridMode] = useState('medium')
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState(null)
   const pageSize = gridMode === 'medium' ? 25 : 24
 
   const colsByMode = {
@@ -145,18 +150,14 @@ export function HomePage() {
     try {
       setLoading(true)
       setError('')
-      const [booksRes, categoriesRootsRes, topDiscountedRes, topSellingRes] = await Promise.all([
-        booksApi.list({ size: 60 }),
+      const [categoriesRootsRes, topDiscountedRes, topSellingRes] = await Promise.all([
         categoriesApi.listRoots().catch(() => categoriesApi.list()),
         booksApi.topDiscounted(8).catch(() => []),
         booksApi.topSelling(8).catch(() => []),
       ])
-      const allBooks = booksRes?.data || []
-      setBooks(allBooks)
-      setPage(1)
       setCategories(categoriesRootsRes || [])
-      setDiscountBooks((Array.isArray(topDiscountedRes) && topDiscountedRes.length > 0) ? topDiscountedRes : fallbackTopDiscounted(allBooks))
-      setBestSellerBooks((Array.isArray(topSellingRes) && topSellingRes.length > 0) ? topSellingRes : fallbackTopSelling(allBooks))
+      setDiscountBooks(Array.isArray(topDiscountedRes) && topDiscountedRes.length > 0 ? topDiscountedRes : fallbackTopDiscounted([]))
+      setBestSellerBooks(Array.isArray(topSellingRes) && topSellingRes.length > 0 ? topSellingRes : fallbackTopSelling([]))
     } catch (e) {
       setError(e.message || 'Failed to load data')
     } finally {
@@ -171,6 +172,37 @@ export function HomePage() {
     return () => clearTimeout(timer)
   }, [])
 
+  useEffect(() => {
+    let active = true
+    const fetchBooks = async () => {
+      try {
+        setBooksLoading(true)
+        const params = { size: 60 }
+        if (search.trim()) params.q = search.trim()
+        if (selectedCategory) params.category_id = selectedCategory
+
+        const res = await booksApi.list(params)
+        if (active) {
+          setBooks(res?.data || [])
+          setPage(1)
+        }
+      } catch (err) {
+        console.error('Failed to search books:', err)
+      } finally {
+        if (active) setBooksLoading(false)
+      }
+    }
+
+    const timer = setTimeout(() => {
+      void fetchBooks()
+    }, 300)
+
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
+  }, [search, selectedCategory])
+
   return (
     <Stack>
       <Hero>
@@ -181,7 +213,10 @@ export function HomePage() {
             Browse fresh arrivals, trusted categories, and reader favorites in a quieter bookstore interface built for discovery.
           </SectionSub>
           <HeroActions>
-            <HeroBtn to="/app/catalog" $primary>Browse Catalog</HeroBtn>
+            <HeroBtn to="#books-search-section" onClick={(e) => {
+              e.preventDefault();
+              document.getElementById('books-search-section')?.scrollIntoView({ behavior: 'smooth' });
+            }} $primary>Browse Books</HeroBtn>
             <HeroBtn to="/app/cart">Open Cart</HeroBtn>
           </HeroActions>
         </HeroCopy>
@@ -205,8 +240,22 @@ export function HomePage() {
         {!loading && !error && categories.length === 0 && <StateText>No categories available.</StateText>}
         {!loading && !error && categories.length > 0 && (
           <CategoryList>
+            <CategoryChip
+              type="button"
+              $active={selectedCategory === null}
+              onClick={() => setSelectedCategory(null)}
+            >
+              All Categories
+            </CategoryChip>
             {categories.map((item) => (
-              <CategoryChip key={item.id || item.slug || item.name}>{item.name}</CategoryChip>
+              <CategoryChip
+                type="button"
+                key={item.id || item.slug || item.name}
+                $active={selectedCategory === item.id}
+                onClick={() => setSelectedCategory(prev => prev === item.id ? null : item.id)}
+              >
+                {item.name}
+              </CategoryChip>
             ))}
           </CategoryList>
         )}
@@ -252,7 +301,7 @@ export function HomePage() {
         )}
       </HorizontalScrollSection>
 
-      <Section>
+      <Section id="books-search-section">
         <SectionHead>
           <SectionTitle>Books</SectionTitle>
           <GridModeControl>
@@ -262,15 +311,23 @@ export function HomePage() {
             <SectionCta to="/app/home">View list</SectionCta>
           </GridModeControl>
         </SectionHead>
-        {loading && <StateText>Loading books...</StateText>}
-        {!loading && error && (
+        <SearchShell>
+          <Search
+            placeholder="Search books, authors, categories, or keywords..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search books"
+          />
+        </SearchShell>
+        {(loading || booksLoading) && <StateText>Loading books...</StateText>}
+        {!loading && !booksLoading && error && (
           <>
             <StateText role="alert">Error: {error}</StateText>
             <RetryButton type="button" onClick={() => void load()}>Retry</RetryButton>
           </>
         )}
-        {!loading && !error && books.length === 0 && <StateText>No books available.</StateText>}
-        {!loading && !error && books.length > 0 && (
+        {!loading && !booksLoading && books.length === 0 && <StateText>No books available.</StateText>}
+        {!loading && !booksLoading && books.length > 0 && (
           <>
             <Books $cols={colsByMode[gridMode]}>
               {currentBooks.map((book, index) => (

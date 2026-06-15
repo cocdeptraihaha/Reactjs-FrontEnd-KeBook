@@ -202,13 +202,20 @@ export const CategoryList = styled.div`
   gap: 8px;
 `
 
-export const CategoryChip = styled.span`
+export const CategoryChip = styled.button`
   border-radius: var(--radius-pill);
-  padding: 7px 10px;
+  padding: 7px 12px;
   font-size: 0.76rem;
-  background: var(--surface-card);
-  color: var(--text-secondary);
-  border: 1px solid rgba(185, 170, 150, 0.56);
+  background: ${(p) => (p.$active ? 'rgba(30, 74, 42, 0.12)' : 'var(--surface-card)')};
+  color: ${(p) => (p.$active ? 'var(--brand-900)' : 'var(--text-secondary)')};
+  border: 1px solid ${(p) => (p.$active ? 'var(--brand-700)' : 'rgba(185, 170, 150, 0.56)')};
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(30, 74, 42, 0.06);
+    border-color: var(--brand-700);
+  }
 `
 
 export const StateText = styled.p`
@@ -271,4 +278,29 @@ export const PagerBtn = styled.button`
 export const PagerText = styled.span`
   font-size: 0.74rem;
   color: var(--text-secondary);
+`
+
+export const SearchShell = styled.div`
+  width: 100%;
+  max-width: 580px;
+  margin-top: 10px;
+  margin-bottom: 6px;
+`
+
+export const Search = styled.input`
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--radius-pill);
+  padding: 0 16px;
+  font-size: 0.8rem;
+  background: #fff;
+  border: 1px solid rgba(30, 74, 42, 0.2);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s ease;
+
+  &:focus {
+    border-color: var(--brand-700);
+    box-shadow: 0 0 0 3px rgba(30, 74, 42, 0.08);
+  }
 `

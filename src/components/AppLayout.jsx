@@ -159,7 +159,6 @@ export function AppLayout() {
           <Brand to="/app/home"><BookOpen size={19} /> KeBook Atelier</Brand>
           <Nav aria-label="Primary navigation">
             <NavItem to="/app/home"><Home size={15} /> Home</NavItem>
-            <NavItem to="/app/catalog"><BookOpen size={15} /> Catalog</NavItem>
             <NavItem to="/app/profile"><User size={15} /> Profile</NavItem>
           </Nav>
           <RightActions>

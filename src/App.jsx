@@ -4,7 +4,6 @@ import { RequireRole } from './auth/RequireRole'
 import { AppLayout } from './components/AppLayout'
 import { BookDetailPage } from './pages/BookDetailPage'
 import { CartPage } from './pages/CartPage'
-import { CatalogPage } from './pages/CatalogPage'
 import { HomePage } from './pages/HomePage'
 import { AccountSettingsPage, ProfilePage } from './pages/ProfilePage'
 import { LoginPage } from './pages/LoginPage'
@@ -51,7 +50,6 @@ function App() {
       >
         <Route index element={<Navigate to="/app/home" replace />} />
         <Route path="home" element={<HomePage />} />
-        <Route path="catalog" element={<CatalogPage />} />
         <Route path="book/:id" element={<BookDetailPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="cart" element={<CartPage />} />
