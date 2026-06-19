@@ -1,19 +1,65 @@
 import styled from 'styled-components'
 
 export const Container = styled.div`
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 32px 24px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 32px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #f8fafc;
+  min-height: 100vh;
 `
 
-export const PageTitle = styled.h1`
-  font-size: 28px;
-  font-weight: 700;
-  color: #1e293b;
+export const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 24px;
+`
+
+export const Title = styled.h1`
+  font-size: 32px;
+  font-weight: 800;
+  color: #0f172a;
   margin: 0;
+  letter-spacing: -0.025em;
+`
+
+export const FilterBar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background-color: #ffffff;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+`
+
+export const SearchInput = styled.input`
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  background-color: #ffffff;
+  color: #334155;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  min-width: 260px;
+  flex: 1;
+
+  &:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
 `
 
 export const TableContainer = styled.div`
@@ -422,5 +468,151 @@ export const UploadProgressWrap = styled.div`
   font-size: 13px;
   color: #334155;
 `
+
+export const PaginationContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  border-radius: 0 0 12px 12px;
+`
+
+export const PaginationInfo = styled.span`
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+`
+
+export const PaginationControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
+export const PaginationButton = styled.button`
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #f8fafc;
+    border-color: #94a3b8;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`
+
+/* Tab Navigation Styles */
+export const TabHeader = styled.div`
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 2px;
+  margin-bottom: 24px;
+`
+
+export const TabButton = styled.button`
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  color: ${props => props.$active ? '#3b82f6' : '#64748b'};
+  background: none;
+  border: none;
+  border-bottom: 3px solid ${props => props.$active ? '#3b82f6' : 'transparent'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  margin-bottom: -3px;
+
+  &:hover {
+    color: #3b82f6;
+  }
+`
+
+/* Category Tree Styles */
+export const CategoryTreeContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  max-height: 480px;
+  overflow-y: auto;
+`
+
+export const CategoryRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    border-color: #cbd5e1;
+  }
+`
+
+export const CategoryInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+`
+
+export const CategoryActions = styled.div`
+  display: flex;
+  gap: 6px;
+`
+
+export const CategoryBadge = styled.span`
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  padding: 2px 6px;
+  border-radius: 4px;
+`
+
+export const SubCategoryContainer = styled.div`
+  margin-left: 24px;
+  border-left: 2px dashed #cbd5e1;
+  padding-left: 12px;
+  margin-top: 4px;
+`
+
+export const CompactCheckboxGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px;
+  background-color: #ffffff;
+`
+
+
 
 

@@ -22,6 +22,13 @@ export const Container = styled.div`
   animation: ${fadeIn} 0.5s ease-out;
   background-color: #f8fafc;
   min-height: 100vh;
+
+  @media print {
+    padding: 0;
+    background-color: #ffffff;
+    gap: 20px;
+    min-height: auto;
+  }
 `
 
 export const Header = styled.div`
@@ -32,6 +39,12 @@ export const Header = styled.div`
   gap: 20px;
   border-bottom: 1px solid #e2e8f0;
   padding-bottom: 24px;
+
+  @media print {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 10px;
+  }
 `
 
 export const Title = styled.h1`
@@ -46,7 +59,52 @@ export const FilterBar = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+
+  > div {
+    max-width: 200px;
+  }
+
+  @media (max-width: 1024px) {
+    flex-wrap: wrap;
+    > div {
+      max-width: 280px;
+    }
+  }
+
+  @media print {
+    display: none !important;
+  }
+`
+
+export const ExportPdfButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(16, 185, 129, 0.3);
+    filter: brightness(1.05);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  @media print {
+    display: none !important;
+  }
 `
 
 export const DateInput = styled.input`
@@ -109,12 +167,20 @@ export const ExportButton = styled.a`
   &:active {
     transform: translateY(0);
   }
+
+  @media print {
+    display: none !important;
+  }
 `
 
 export const MetricsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 24px;
+
+  @media print {
+    grid-template-columns: repeat(2, 1fr);
+  }
 `
 
 export const MetricCard = styled.div`
@@ -179,6 +245,12 @@ export const MainContentGrid = styled.div`
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
+
+  @media print {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
 `
 
 export const Panel = styled.div`
@@ -190,6 +262,13 @@ export const Panel = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden; /* Avoid panel content leaking out */
+
+  @media print {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    height: auto;
+  }
 `
 
 export const PanelTitle = styled.h2`
@@ -317,6 +396,12 @@ export const SecondaryGrid = styled.div`
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
+
+  @media print {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
 `
 
 export const CategoryItem = styled.div`
@@ -411,6 +496,25 @@ export const ChartContainer = styled.div`
   flex-direction: column;
   gap: 20px;
   margin-top: 20px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 8px;
+
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
 `
 
 export const ChartRow = styled.div`
@@ -458,21 +562,40 @@ export const ChartValue = styled.div`
 export const VerticalChartContainer = styled.div`
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-start;
   height: 280px;
   padding: 24px 16px;
   background: #f8fafc;
   border-radius: 16px;
   border: 1px solid #f1f5f9;
   margin-top: 20px;
-  gap: 12px;
+  gap: 16px;
+  overflow-x: auto;
+  max-width: 100%;
+
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
 `
 
 export const VerticalChartColumn = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
+  min-width: 50px;
+  flex-shrink: 0;
   height: 100%;
   justify-content: flex-end;
   position: relative;
@@ -588,3 +711,46 @@ export const RingWrapper = styled.div`
   align-items: center;
   justify-content: center;
 `
+
+export const PieChartWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+`
+
+export const PieLegend = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 150px;
+`
+
+export const LegendItem = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  border: 1px solid #f1f5f9;
+  font-size: 13px;
+  font-weight: 600;
+`
+
+export const LegendColor = styled.div`
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: ${props => props.$color || '#cbd5e1'};
+`
+
+export const LegendTextWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
