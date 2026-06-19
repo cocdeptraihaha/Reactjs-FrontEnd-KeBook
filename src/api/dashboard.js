@@ -10,6 +10,7 @@ export const dashboardApi = {
   getTopCustomers: (params) => apiClient.get('/admin/dashboard/top-customers', { params }),
   getOrderStatusBreakdown: (params) => apiClient.get('/admin/dashboard/order-status-breakdown', { params }),
   getCancellationTimeseries: (params) => apiClient.get('/admin/dashboard/cancellation-timeseries', { params }),
+  getBuyerGender: (params) => apiClient.get('/admin/dashboard/buyer-gender', { params }),
   getRevenueCsvUrl: (params) => {
     const query = new URLSearchParams()
     if (params?.from) query.append('from', params.from)

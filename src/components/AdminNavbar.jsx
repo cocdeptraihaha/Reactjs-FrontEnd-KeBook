@@ -1,6 +1,6 @@
 import { NavLink, Link } from 'react-router-dom'
 import styled from 'styled-components'
-import { BarChart2, Package, PlusCircle, Shield, ArrowLeft } from 'react-feather'
+import { BarChart2, Package, PlusCircle, Shield, ArrowLeft, Users, Bell, Tag } from 'react-feather'
 
 const HeaderContainer = styled.header`
   background: #ffffff;
@@ -14,6 +14,10 @@ const HeaderContainer = styled.header`
   z-index: 100;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  @media print {
+    display: none !important;
+  }
 `
 
 const BrandingGroup = styled(Link)`
@@ -143,7 +147,19 @@ export function AdminNavbar() {
         </StyledLink>
         <StyledLink to="/app/admin/books/new">
           <PlusCircle size={16} />
-          Add Book
+          Books
+        </StyledLink>
+        <StyledLink to="/app/admin/users">
+          <Users size={16} />
+          Users
+        </StyledLink>
+        <StyledLink to="/app/admin/promotions">
+          <Tag size={16} />
+          Promotions
+        </StyledLink>
+        <StyledLink to="/app/admin/notifications">
+          <Bell size={16} />
+          Notifications
         </StyledLink>
       </NavMenu>
 

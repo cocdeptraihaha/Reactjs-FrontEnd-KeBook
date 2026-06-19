@@ -94,12 +94,12 @@ export const NavItem = styled(NavLink)`
 `
 
 export const Main = styled.main`
-  width: min(var(--container-max), 100%);
+  width: ${props => props.$isAdmin ? '100%' : 'min(var(--container-max), 100%)'};
   margin: 0 auto;
-  padding: 12px 18px 72px;
+  padding: ${props => props.$isAdmin ? '0' : '12px 18px 72px'};
 
   @media (min-width: 1200px) {
-    padding: 16px 18px 88px;
+    padding: ${props => props.$isAdmin ? '0' : '16px 18px 88px'};
   }
 `
 

@@ -29,6 +29,32 @@ export const booksApi = {
   similar: (id) => apiClient.get(`/books/${id}/similar`),
   recordView: (id) => apiClient.post(`/books/${id}/view`),
   create: (payload) => apiClient.post('/books/', payload),
+  update: (id, payload) => apiClient.patch(`/books/${id}`, payload),
+  remove: (id) => apiClient.delete(`/books/${id}`),
+  restore: (id) => apiClient.post(`/books/${id}/restore`),
+  updateDetail: (detailId, payload) => apiClient.patch(`/book-details/${detailId}`, payload),
+  adminList: async (params = {}) => {
+    const query = new URLSearchParams()
+    if (params.q) query.set('q', params.q)
+    if (params.category_id) query.set('category_id', String(params.category_id))
+    if (params.page) query.set('page', String(params.page))
+    if (params.size) query.set('size', String(params.size))
+    if (params.status) query.set('status', params.status)
+    if (params.include_deleted !== undefined) query.set('include_deleted', String(params.include_deleted))
+    if (params.sort) query.set('sort', params.sort)
+    if (params.order) query.set('order', params.order)
+    const suffix = query.toString() ? `?${query.toString()}` : ''
+    const res = await apiClient.get(`/books/admin/all${suffix}`)
+    const page = normalizePage(res)
+    return {
+      data: page.items,
+      page,
+      raw: res,
+    }
+  },
+  categories: {
+    update: (bookId, payload) => apiClient.put(`/books/${bookId}/categories`, payload),
+  },
   images: {
     list: async (bookId) => {
       const res = await apiClient.get(`/books/${bookId}/images`)

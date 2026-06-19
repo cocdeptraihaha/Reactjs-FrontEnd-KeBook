@@ -248,5 +248,16 @@ export const notificationsApi = {
   }),
   markRead: (id) => apiClient.post(`/notifications/${id}/read`),
   markReadAll: () => apiClient.post('/notifications/me/read-all'),
+
+  // Admin APIs
+  adminList: async (params = {}) => {
+    const query = new URLSearchParams()
+    if (params.skip !== undefined) query.set('skip', String(params.skip))
+    if (params.limit !== undefined) query.set('limit', String(params.limit))
+    const suffix = query.toString() ? `?${query.toString()}` : ''
+    return ensureArray(await apiClient.get(`/notifications/${suffix}`)).map(normalizeNotificationItem)
+  },
+  adminSend: (userIds, title, message, type = 'GENERIC') => apiClient.post('/notifications/', { user_ids: userIds, title, message, type }),
+  adminBroadcast: (title, message, type = 'GENERIC') => apiClient.post('/notifications/broadcast', { title, message, type }),
 }
 

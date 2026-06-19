@@ -42,16 +42,30 @@ function shouldRetry(error) {
   return error?.name === 'AbortError' || error?.status === 0 || error?.retryable === true
 }
 
-async function request(path, { method = 'GET', body, headers, timeoutMs = DEFAULT_TIMEOUT_MS, retry = MAX_RETRIES, rawBody = false } = {}) {
+async function request(path, { method = 'GET', body, headers, timeoutMs = DEFAULT_TIMEOUT_MS, retry = MAX_RETRIES, rawBody = false, params } = {}) {
   let attempt = 0
   let lastError = null
+
+  let fullPath = path
+  if (params && typeof params === 'object') {
+    const query = new URLSearchParams()
+    Object.entries(params).forEach(([key, val]) => {
+      if (val !== undefined && val !== null) {
+        query.append(key, val)
+      }
+    })
+    const queryString = query.toString()
+    if (queryString) {
+      fullPath += (fullPath.includes('?') ? '&' : '?') + queryString
+    }
+  }
 
   while (attempt <= retry) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort('timeout'), timeoutMs)
 
   try {
-      const response = await fetch(`${API_BASE_URL}${path}`, {
+      const response = await fetch(`${API_BASE_URL}${fullPath}`, {
         method,
         headers: buildHeaders(headers),
         body: body ? (rawBody ? body : JSON.stringify(body)) : undefined,
@@ -64,6 +78,15 @@ async function request(path, { method = 'GET', body, headers, timeoutMs = DEFAUL
 
       if (!response.ok) {
         const detailMessage = payload?.detail || payload?.message
+
+        // Auto-logout on token expiration (401 Unauthorized)
+        if (response.status === 401) {
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('auth_user')
+          // Force page reload to trigger Router redirection
+          window.location.href = '/auth/login'
+        }
+
         throw normalizeError({
           status: response.status,
           code: response.status,

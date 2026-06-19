@@ -15,6 +15,7 @@ export const ordersApi = {
   checkout: (payload) => apiClient.post('/orders/checkout', payload),
   cancel: (orderId, payload) => apiClient.post(`/orders/${orderId}/cancel`, payload),
   confirmReceived: (orderId) => apiClient.post(`/orders/${orderId}/confirm-received`),
-  adminList: async () => ensureArray(await apiClient.get('/orders/admin/all')),
+  adminList: async (params) => ensureArray(await apiClient.get('/orders/admin/all', { params })),
   adminUpdateStatus: (orderId, payload) => apiClient.patch(`/orders/admin/${orderId}/status`, payload),
+  adminResolveCancel: (orderId, payload) => apiClient.post(`/orders/admin/${orderId}/cancel-decision`, payload),
 }

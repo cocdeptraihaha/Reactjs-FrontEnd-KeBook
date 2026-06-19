@@ -1,6 +1,6 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Outlet } from 'react-router-dom'
-import { Bell, BookOpen, Check, Home, ShoppingCart, User, X } from 'react-feather'
+import { Outlet, useLocation } from 'react-router-dom'
+import { Bell, BookOpen, Check, Home, ShoppingCart, User, X, Search, Grid } from 'react-feather'
 import { notificationsApi } from '../api/notifications'
 import { useAuth } from '../auth/auth-store'
 import {
@@ -74,6 +74,8 @@ function payloadLine(payload) {
 
 export function AppLayout() {
   const { isAuthenticated, user, logout } = useAuth()
+  const location = useLocation()
+  const isAdminRoute = location.pathname.startsWith('/app/admin')
   const [showNoti, setShowNoti] = useState(false)
   const [loadingNoti, setLoadingNoti] = useState(false)
   const [notiError, setNotiError] = useState('')
@@ -154,37 +156,41 @@ export function AppLayout() {
 
   return (
     <Shell>
-      <Header>
-        <HeaderPanel>
-          <Brand to="/app/home"><BookOpen size={19} /> KeBook Atelier</Brand>
-          <Nav aria-label="Primary navigation">
-            <NavItem to="/app/home"><Home size={15} /> Home</NavItem>
-            <NavItem to="/app/profile"><User size={15} /> Profile</NavItem>
-          </Nav>
-          <RightActions>
-            <IconWrap>
-              <IconBtn type="button" aria-label="Open notifications" onClick={() => setShowNoti(true)}>
-                <Bell size={16} />
-              </IconBtn>
-              {isAuthenticated && unreadCount > 0 && <Badge>{unreadLabel}</Badge>}
-            </IconWrap>
-            <IconLink to="/app/cart" aria-label="Open cart">
-              <ShoppingCart size={16} />
-            </IconLink>
-            <AuthBox>
-              {isAuthenticated ? (
-                <>
-                  <AuthText aria-live="polite">{user?.username || user?.email || 'Signed in'}</AuthText>
-                  <AuthButton type="button" onClick={logout}>Logout</AuthButton>
-                </>
-              ) : (
-                <NavItem to="/auth/login">Login</NavItem>
-              )}
-            </AuthBox>
-          </RightActions>
-        </HeaderPanel>
-      </Header>
-      <Main>
+      {!isAdminRoute && (
+        <Header>
+          <HeaderPanel>
+            <Brand to="/app/home"><BookOpen size={19} /> KeBook Atelier</Brand>
+            <Nav aria-label="Primary navigation">
+              <NavItem to="/app/home"><Home size={15} /> Trang Chủ</NavItem>
+              <NavItem to="/app/categories"><Grid size={15} /> Thể Loại</NavItem>
+              <NavItem to="/app/search"><Search size={15} /> Tìm Kiếm</NavItem>
+              <NavItem to="/app/profile"><User size={15} /> Cá Nhân</NavItem>
+            </Nav>
+            <RightActions>
+              <IconWrap>
+                <IconBtn type="button" aria-label="Open notifications" onClick={() => setShowNoti(true)}>
+                  <Bell size={16} />
+                </IconBtn>
+                {isAuthenticated && unreadCount > 0 && <Badge>{unreadLabel}</Badge>}
+              </IconWrap>
+              <IconLink to="/app/cart" aria-label="Open cart">
+                <ShoppingCart size={16} />
+              </IconLink>
+              <AuthBox>
+                {isAuthenticated ? (
+                  <>
+                    <AuthText aria-live="polite">{user?.username || user?.email || 'Signed in'}</AuthText>
+                    <AuthButton type="button" onClick={logout}>Logout</AuthButton>
+                  </>
+                ) : (
+                  <NavItem to="/auth/login">Login</NavItem>
+                )}
+              </AuthBox>
+            </RightActions>
+          </HeaderPanel>
+        </Header>
+      )}
+      <Main $isAdmin={isAdminRoute}>
         <Outlet />
       </Main>
       {showNoti && (
