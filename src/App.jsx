@@ -1,30 +1,37 @@
-﻿import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { RequireAuth } from './auth/RequireAuth'
 import { RequireRole } from './auth/RequireRole'
 import { AppLayout } from './components/AppLayout'
-import { BookDetailPage } from './pages/BookDetailPage'
-import { CartPage } from './pages/CartPage'
-import { HomePage } from './pages/HomePage'
-import { AccountSettingsPage, ProfilePage } from './pages/ProfilePage'
 import { LoginPage } from './pages/LoginPage'
-import { OrderDetailPage, OrderHistoryPage } from './pages/OrdersPage'
 import {
-  AdminAddBookPage,
-  AdminOrdersPage,
-  AdminDashboardPage,
-  AuthGatePage,
+  HomePage,
+  CategoryPage,
+  SearchPage,
+  BookDetailPage,
+  CartPage,
   CheckoutPage,
+  OrderDetailPage,
+  OrderHistoryPage,
+  ProfilePage,
+  AccountSettingsPage,
   FavoritesPage,
-  ForgotPasswordPage,
-  MyVouchersPage,
-  NotificationsPage,
   PointsHistoryPage,
-  RegisterPage,
-  ResetPasswordPage,
+  MyVouchersPage,
   RewardsPage,
   SupportTicketPage,
-  VerifyOtpPage,
   WriteReviewPage,
+  NotificationsPage,
+  AdminOrdersPage,
+  AdminAddBookPage,
+  AdminDashboardPage,
+  AdminUsersPage,
+  AdminNotificationsPage,
+  AdminPromotionsPage,
+  AuthGatePage,
+  ForgotPasswordPage,
+  RegisterPage,
+  ResetPasswordPage,
+  VerifyOtpPage
 } from './pages/WorkflowPages'
 
 function App() {
@@ -50,6 +57,8 @@ function App() {
       >
         <Route index element={<Navigate to="/app/home" replace />} />
         <Route path="home" element={<HomePage />} />
+        <Route path="search" element={<SearchPage />} />
+        <Route path="categories" element={<CategoryPage />} />
         <Route path="book/:id" element={<BookDetailPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="cart" element={<CartPage />} />
@@ -85,6 +94,30 @@ function App() {
           element={(
             <RequireRole role="ADMIN">
               <AdminAddBookPage />
+            </RequireRole>
+          )}
+        />
+        <Route
+          path="admin/users"
+          element={(
+            <RequireRole role="ADMIN">
+              <AdminUsersPage />
+            </RequireRole>
+          )}
+        />
+        <Route
+          path="admin/notifications"
+          element={(
+            <RequireRole role="ADMIN">
+              <AdminNotificationsPage />
+            </RequireRole>
+          )}
+        />
+        <Route
+          path="admin/promotions"
+          element={(
+            <RequireRole role="ADMIN">
+              <AdminPromotionsPage />
             </RequireRole>
           )}
         />
