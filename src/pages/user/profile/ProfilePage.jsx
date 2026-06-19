@@ -24,12 +24,12 @@ import {
   X,
   Shield,
 } from 'react-feather'
-import { addressesApi } from '../api/addresses'
-import { authApi } from '../api/auth'
-import { uploadApi } from '../api/upload'
-import { usersApi } from '../api/users'
-import { useAuth } from '../auth/auth-store'
-import { Modal } from '../components/ui/Modal'
+import { addressesApi } from '../../../api/addresses'
+import { authApi } from '../../../api/auth'
+import { uploadApi } from '../../../api/upload'
+import { usersApi } from '../../../api/users'
+import { useAuth } from '../../../auth/auth-store'
+import { Modal } from '../../../components/ui/Modal'
 import {
   Shell,
   ProfileCanvas,

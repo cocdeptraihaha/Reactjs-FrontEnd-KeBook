@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import { Info } from 'react-feather'
-import { pointsApi } from '../../api/points'
-import { usersApi } from '../../api/users'
-import { Section, SectionSub, SectionTitle } from '../../components/Section'
-import { useAsync } from '../../hooks/useAsync'
-import { formatPoint } from '../../utils/formatters'
-import { Alert, BalanceCard, P, PrimaryCheckoutButton, RewardAction, RewardCard, RewardCost, RewardIconBox, RewardInfo, RewardList, RewardName, RewardNote, RewardsShell, RewardTag, RewardTop, SuccessText, Wrap } from '../WorkflowPages.styles'
+import { pointsApi } from '../../../api/points'
+import { usersApi } from '../../../api/users'
+import { Section, SectionSub, SectionTitle } from '../../../components/Section'
+import { useAsync } from '../../../hooks/useAsync'
+import { formatPoint } from '../../../utils/formatters'
+import { Alert, BalanceCard, P, PrimaryCheckoutButton, RewardAction, RewardCard, RewardCost, RewardIconBox, RewardInfo, RewardList, RewardName, RewardNote, RewardsShell, RewardTag, RewardTop, SuccessText, Wrap } from '../../WorkflowPages.styles'
 import { getPointBalance, getRewardFallbackName, getRewardIcon, getRewardRemaining, getRewardTag } from './rewardUtils'
 
 export function RewardsPage() {
   const rewards = useAsync(() => pointsApi.rewards(), [])
   const points = useAsync(() => usersApi.myPoints(), [])
+  const transactions = useAsync(() => usersApi.pointTransactions(), [])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [redeemingId, setRedeemingId] = useState(null)
@@ -18,6 +19,15 @@ export function RewardsPage() {
 
   async function redeem(reward) {
     const remaining = getRewardRemaining(reward)
+    const alreadyRedeemed = (transactions.data || []).some(
+      (tx) => tx.ref_type === 'point_reward' && Number(tx.ref_id) === Number(reward.id)
+    )
+
+    if (alreadyRedeemed) {
+      setError('Bạn đã đổi voucher này trước đó')
+      setSuccess('')
+      return
+    }
     if (balance < Number(reward.cost_points || 0)) {
       setError('Bạn chưa đủ điểm để đổi voucher này')
       setSuccess('')
@@ -35,7 +45,7 @@ export function RewardsPage() {
       setSuccess('')
       const redeemed = await pointsApi.redeem(reward.id)
       setSuccess(`Đổi thành công: ${redeemed?.code || 'voucher mới'}`)
-      await Promise.all([rewards.reload(), points.reload()])
+      await Promise.all([rewards.reload(), points.reload(), transactions.reload()])
     } catch (x) {
       setError(x.message || 'Redeem failed')
     } finally {
@@ -70,7 +80,10 @@ export function RewardsPage() {
               const remaining = getRewardRemaining(reward)
               const insufficient = balance < Number(reward.cost_points || 0)
               const soldOut = remaining === 0
-              const disabled = insufficient || soldOut || redeemingId === reward.id
+              const alreadyRedeemed = (transactions.data || []).some(
+                (tx) => tx.ref_type === 'point_reward' && Number(tx.ref_id) === Number(reward.id)
+              )
+              const disabled = insufficient || soldOut || alreadyRedeemed || redeemingId === reward.id
               return (
                 <RewardCard key={reward.id}>
                   <RewardIconBox>
@@ -87,13 +100,14 @@ export function RewardsPage() {
                   </RewardCost>
                   <RewardAction>
                     <PrimaryCheckoutButton type="button" onClick={() => redeem(reward)} disabled={disabled}>
-                      {redeemingId === reward.id ? 'Đang đổi...' : 'Đổi ngay'}
+                      {redeemingId === reward.id ? 'Đang đổi...' : (alreadyRedeemed ? 'Đã đổi' : 'Đổi ngay')}
                     </PrimaryCheckoutButton>
                     <P>
-                      {remaining == null ? 'Còn lại: Không giới hạn' : `Còn lại: ${formatPoint(remaining)} lượt`}
+                      {remaining == null ? 'Còn lại: Nhiều' : `Còn lại: ${formatPoint(remaining)} lượt`}
                     </P>
-                    {insufficient && <Alert>Không đủ điểm</Alert>}
-                    {soldOut && <Alert>Hết lượt</Alert>}
+                    {insufficient && !alreadyRedeemed && <Alert>Không đủ điểm</Alert>}
+                    {soldOut && !alreadyRedeemed && <Alert>Hết lượt</Alert>}
+                    {alreadyRedeemed && <Alert style={{ color: '#27ae60' }}>Đã sở hữu</Alert>}
                   </RewardAction>
                 </RewardCard>
               )

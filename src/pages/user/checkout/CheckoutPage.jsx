@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { addressesApi } from '../../api/addresses'
-import { cartApi } from '../../api/cart'
-import { ordersApi } from '../../api/orders'
-import { promotionsApi } from '../../api/promotions'
-import { Section, SectionSub, SectionTitle } from '../../components/Section'
-import { AddressChoice, AddressChoices, AddressName, Badge, Btn, CheckoutGrid, CheckoutPanel, DiscountLine, Input, List, P, PanelTitle, PrimaryCheckoutButton, Row, SpacedAlert, StackedCheckoutPanel, SuccessText, SummaryItem, SummaryLine, Textarea, TotalLine, Wrap } from '../WorkflowPages.styles'
+import { addressesApi } from '../../../api/addresses'
+import { cartApi } from '../../../api/cart'
+import { ordersApi } from '../../../api/orders'
+import { promotionsApi } from '../../../api/promotions'
+import { Section, SectionSub, SectionTitle } from '../../../components/Section'
+import { AddressChoice, AddressChoices, AddressName, Badge, Btn, CheckoutGrid, CheckoutPanel, DiscountLine, Input, List, P, PanelTitle, PrimaryCheckoutButton, Row, SpacedAlert, StackedCheckoutPanel, SuccessText, SummaryItem, SummaryLine, Textarea, TotalLine, Wrap } from '../../WorkflowPages.styles'
 
 export function CheckoutPage() {
   const navigate = useNavigate()
@@ -15,6 +15,7 @@ export function CheckoutPage() {
   const [loading, setLoading] = useState(false)
   const [promotion, setPromotion] = useState('')
   const [promoInfo, setPromoInfo] = useState(null)
+  const [availablePromos, setAvailablePromos] = useState([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [form, setForm] = useState({
@@ -53,6 +54,13 @@ export function CheckoutPage() {
         const defaultAddress = (addressRows || []).find((address) => address?.is_default)
         return String(defaultAddress?.id || addressRows?.[0]?.id || '')
       })
+
+      // Fetch available promotions
+      const currentSubtotal = merged.reduce((acc, item) => acc + Number(item?.price || 0) * Number(item?.quantity || 0), 0)
+      if (currentSubtotal > 0) {
+        const promos = await promotionsApi.listAvailable(currentSubtotal).catch(() => [])
+        setAvailablePromos(promos || [])
+      }
     } catch (e) {
       setError(e.message || 'Failed to load checkout')
     } finally {
@@ -73,6 +81,9 @@ export function CheckoutPage() {
 
   const discount = useMemo(() => {
     if (!promoInfo) return 0
+    if (promoInfo.discount_amount !== undefined) {
+      return Number(promoInfo.discount_amount || 0)
+    }
     if (promoInfo.discount_type === 'PERCENTAGE') {
       return (subtotal * Number(promoInfo.discount_value || 0)) / 100
     }
@@ -198,6 +209,54 @@ export function CheckoutPage() {
               />
               <Btn type="button" onClick={validatePromo} disabled={!promotion.trim() || subtotal <= 0}>Apply</Btn>
             </Row>
+
+            {availablePromos.length > 0 && (
+              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#475569' }}>Mã khuyến mãi khả thi:</p>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {availablePromos.map((p) => {
+                    const discountLabel = p.discount_percent
+                      ? `${p.discount_percent}%`
+                      : `${Number(p.discount_amount || 0).toLocaleString('vi-VN')}đ`
+                    const isApplied = promotion.toUpperCase() === p.code?.toUpperCase()
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '16px',
+                          border: isApplied ? '1px solid #10b981' : '1px solid #cbd5e1',
+                          backgroundColor: isApplied ? '#ecfdf5' : '#fff',
+                          color: isApplied ? '#047857' : '#1e293b',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          fontWeight: isApplied ? 'bold' : 'normal',
+                          transition: 'all 0.2s'
+                        }}
+                        onClick={() => {
+                          setPromotion(p.code || '')
+                          // Trigger validate immediately
+                          const runValidate = async () => {
+                            try {
+                              setError('')
+                              const info = await promotionsApi.validate(p.code, subtotal)
+                              setPromoInfo(info)
+                            } catch (x) {
+                              setError(x.message || 'Invalid promotion')
+                              setPromoInfo(null)
+                            }
+                          }
+                          void runValidate()
+                        }}
+                      >
+                        {p.code} (-{discountLabel})
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {promoInfo && (
               <SuccessText>

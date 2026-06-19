@@ -1,0 +1,387 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
+import { booksApi, pickPrimaryImage } from '../../../api/books'
+import { cartApi } from '../../../api/cart'
+import { reviewsApi } from '../../../api/reviews'
+import { useAuth } from '../../../auth/auth-store'
+import { SectionSub, SectionTitle } from '../../../components/Section'
+import { ProductCard } from '../../../components/product/ProductCard'
+import {
+  Wrap,
+  Hero,
+  Cover,
+  CoverImg,
+  Thumbs,
+  Thumb,
+  ThumbImg,
+  BookTitle,
+  Meta,
+  PriceRow,
+  CurrentPrice,
+  OriginalPrice,
+  DiscountBadge,
+  StockBadge,
+  Actions,
+  PrimaryBtn,
+  StateText,
+  RetryButton,
+  ListCard,
+  SimilarViewport,
+  SimilarGrid,
+  SpecsTable,
+  SpecsRow,
+  SpecLabel,
+  SpecValue,
+  DescriptionBox,
+  RatingSummaryContainer,
+  AvgScoreBox,
+  AvgScore,
+  AvgStars,
+  TotalReviewsCount,
+  RatingBars,
+  RatingRow,
+  StarLabel,
+  ProgressBarContainer,
+  ProgressBar,
+  PercentLabel,
+  ReviewList,
+  ReviewItem,
+  ReviewHeader,
+  Avatar,
+  ReviewMetaInfo,
+  ReviewAuthor,
+  ReviewStars,
+  ReviewDate,
+  ReviewContent,
+} from './BookDetailPage.styles'
+
+function asNumber(value, fallback = 0) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function formatVnd(value) {
+  return `${Number(value || 0).toLocaleString('vi-VN')} đ`
+}
+
+function renderStars(rating) {
+  const score = Math.round(Number(rating || 0))
+  const stars = []
+  for (let i = 1; i <= 5; i++) {
+    stars.push(i <= score ? '★' : '☆')
+  }
+  return stars.join('')
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  try {
+    const d = new Date(dateStr)
+    return d.toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' })
+  } catch (e) {
+    return dateStr
+  }
+}
+
+export function BookDetailPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
+  const [book, setBook] = useState(null)
+  const [similar, setSimilar] = useState([])
+  const [reviews, setReviews] = useState([])
+  const [avg, setAvg] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [selectedImage, setSelectedImage] = useState('')
+  const similarViewportRef = useRef(null)
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const [detailRes, similarRes, reviewsRes, avgRes] = await Promise.all([
+        booksApi.detail(id),
+        booksApi.similar(id),
+        reviewsApi.listByBook(id),
+        reviewsApi.averageByBook(id),
+      ])
+      setBook(detailRes?.data || detailRes || null)
+      setSimilar(similarRes?.data || similarRes || [])
+      setReviews(reviewsRes?.data || reviewsRes || [])
+      setAvg(avgRes?.data || avgRes || null)
+      if (isAuthenticated) {
+        void booksApi.recordView(id).catch(() => {})
+      }
+    } catch (e) {
+      setError(e.message || 'Failed to load book data')
+    } finally {
+      setLoading(false)
+    }
+  }, [id, isAuthenticated])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void load()
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [id, isAuthenticated, load])
+
+  useEffect(() => {
+    const viewport = similarViewportRef.current
+    if (!viewport || similar.length <= 1) return undefined
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
+
+    let index = 0
+    const timer = window.setInterval(() => {
+      const firstCard = viewport.querySelector('a')
+      if (!firstCard) return
+
+      const track = firstCard.parentElement
+      const styles = window.getComputedStyle(track)
+      const gap = Number.parseFloat(styles.columnGap || styles.gap || '0') || 0
+      const step = firstCard.getBoundingClientRect().width + gap
+      const visibleCards = Math.max(1, Math.floor((viewport.clientWidth + gap) / step))
+      const maxIndex = Math.max(0, similar.length - visibleCards)
+      index = index >= maxIndex ? 0 : index + 1
+      viewport.scrollTo({ left: step * index, behavior: 'smooth' })
+    }, 5000)
+
+    return () => window.clearInterval(timer)
+  }, [similar.length])
+
+  async function handleAddToCart() {
+    if (!isAuthenticated) {
+      navigate('/auth/login', { state: { from: `/app/book/${id}` } })
+      return
+    }
+
+    try {
+      setActionError('')
+      await cartApi.add({ book_id: Number(id), quantity: 1 })
+      navigate('/app/cart')
+    } catch (e) {
+      const message = e.message || 'Cannot add more than available stock'
+      setActionError(message)
+      toast.error('Stock limit reached', { description: message })
+    }
+  }
+
+  const rating = avg?.average || avg?.value || avg?.avg_rate || 0
+  const totalReviews = avg?.total_reviews || reviews.length
+  const resolvedPrimary = pickPrimaryImage(book)
+  const displayImage = selectedImage || resolvedPrimary
+  const finalPrice = asNumber(book?.final_price ?? book?.selling_price ?? book?.price)
+  const originalPrice = asNumber(book?.original_price ?? book?.selling_price ?? book?.price)
+  const showOriginalPrice = originalPrice > finalPrice && finalPrice > 0
+  const discountPercent = book?.discount_percent || (showOriginalPrice ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100) : 0)
+  const inStock = book?.stock_quantity !== undefined ? book.stock_quantity > 0 : true
+
+  // Compute star distribution percentages
+  const ratingCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+  reviews.forEach((r) => {
+    const rate = Math.round(Number(r.rate || 0))
+    if (rate >= 1 && rate <= 5) {
+      ratingCounts[rate]++
+    }
+  })
+
+  return (
+    <Wrap>
+      <Hero>
+        <div>
+          <Cover>
+            {displayImage ? <CoverImg src={displayImage} alt={book?.title || 'Book image'} /> : null}
+          </Cover>
+          {Array.isArray(book?.images) && book.images.length > 0 && (
+            <Thumbs>
+              {book.images.map((img) => (
+                <Thumb key={img.id || img.image_url} type="button" $active={selectedImage === img.image_url} onClick={() => setSelectedImage(img.image_url)}>
+                  <ThumbImg src={img.image_url} alt={img.alt_text || 'Book thumbnail'} />
+                </Thumb>
+              ))}
+            </Thumbs>
+          )}
+        </div>
+        <div>
+          <SectionTitle>Book Detail</SectionTitle>
+          {loading && <StateText>Loading detail...</StateText>}
+          {!loading && error && (
+            <>
+              <StateText role="alert">Error: {error}</StateText>
+              <RetryButton type="button" onClick={() => void load()}>Retry</RetryButton>
+            </>
+          )}
+          {!loading && !error && !book && <StateText>Book not found.</StateText>}
+          {!loading && !error && book && (
+            <>
+              <BookTitle>{book.title}</BookTitle>
+              <Meta style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--brand-900)' }}>
+                Tác giả: {book.author || 'Chưa rõ'}
+              </Meta>
+
+              <div>
+                <StockBadge $inStock={inStock}>
+                  {inStock ? `Còn hàng (SL: ${book.stock_quantity ?? 0})` : 'Hết hàng'}
+                </StockBadge>
+              </div>
+
+              <PriceRow>
+                <CurrentPrice>{formatVnd(finalPrice)}</CurrentPrice>
+                {showOriginalPrice && (
+                  <>
+                    <OriginalPrice>{formatVnd(originalPrice)}</OriginalPrice>
+                    <DiscountBadge>-{discountPercent}%</DiscountBadge>
+                  </>
+                )}
+              </PriceRow>
+
+              {actionError && <StateText role="alert">Error: {actionError}</StateText>}
+              <Actions>
+                <PrimaryBtn type="button" onClick={handleAddToCart} disabled={!inStock}>
+                  {isAuthenticated ? (inStock ? 'Thêm vào giỏ hàng' : 'Hết hàng') : 'Đăng nhập để mua'}
+                </PrimaryBtn>
+              </Actions>
+            </>
+          )}
+        </div>
+      </Hero>
+
+      {!loading && book && (
+        <>
+          <ListCard>
+            <SectionTitle>Thông số chi tiết</SectionTitle>
+            <SpecsTable>
+              <tbody>
+                <SpecsRow>
+                  <SpecLabel>Nhà xuất bản</SpecLabel>
+                  <SpecValue>{book.book_detail?.publisher || 'N/A'}</SpecValue>
+                </SpecsRow>
+                <SpecsRow>
+                  <SpecLabel>Nhà cung cấp</SpecLabel>
+                  <SpecValue>{book.book_detail?.supplier || 'N/A'}</SpecValue>
+                </SpecsRow>
+                <SpecsRow>
+                  <SpecLabel>Định dạng</SpecLabel>
+                  <SpecValue>{book.format || 'N/A'}</SpecValue>
+                </SpecsRow>
+                <SpecsRow>
+                  <SpecLabel>Số trang</SpecLabel>
+                  <SpecValue>{book.pages || book.book_detail?.pages || 'N/A'}</SpecValue>
+                </SpecsRow>
+                <SpecsRow>
+                  <SpecLabel>Kích thước</SpecLabel>
+                  <SpecValue>
+                    {book.book_detail?.length && book.book_detail?.width
+                      ? `${book.book_detail.length} x ${book.book_detail.width}${
+                          book.book_detail.height ? ` x ${book.book_detail.height}` : ''
+                        } cm`
+                      : 'N/A'}
+                  </SpecValue>
+                </SpecsRow>
+                <SpecsRow>
+                  <SpecLabel>Trọng lượng</SpecLabel>
+                  <SpecValue>{book.book_detail?.weight ? `${book.book_detail.weight} g` : 'N/A'}</SpecValue>
+                </SpecsRow>
+                <SpecsRow>
+                  <SpecLabel>Mã sản phẩm / ISBN</SpecLabel>
+                  <SpecValue>{book.code || 'N/A'}</SpecValue>
+                </SpecsRow>
+                <SpecsRow>
+                  <SpecLabel>Phiên bản</SpecLabel>
+                  <SpecValue>{book.edition ? `Phiên bản ${book.edition}` : 'N/A'}</SpecValue>
+                </SpecsRow>
+              </tbody>
+            </SpecsTable>
+          </ListCard>
+
+          <ListCard>
+            <SectionTitle>Mô tả sản phẩm</SectionTitle>
+            <DescriptionBox>
+              {book.book_detail?.description ? (
+                <p>{book.book_detail.description}</p>
+              ) : (
+                <p>Thông tin mô tả đang được cập nhật.</p>
+              )}
+            </DescriptionBox>
+          </ListCard>
+        </>
+      )}
+
+      <ListCard>
+        <SectionTitle>Similar Books</SectionTitle>
+        {loading && <StateText>Loading similar books...</StateText>}
+        {!loading && !error && similar.length === 0 && <StateText>No similar books.</StateText>}
+        {!loading && !error && similar.length > 0 && (
+          <SimilarViewport ref={similarViewportRef}>
+            <SimilarGrid>
+              {similar.map((item, index) => (
+                <ProductCard book={item} key={item.id || `${item.title}-${index}`} />
+              ))}
+            </SimilarGrid>
+          </SimilarViewport>
+        )}
+      </ListCard>
+
+      <ListCard>
+        <SectionTitle>Đánh giá & Nhận xét</SectionTitle>
+        {loading && <StateText>Loading reviews...</StateText>}
+        {!loading && !error && (
+          <>
+            <RatingSummaryContainer>
+              <AvgScoreBox>
+                <AvgScore>{Number(rating).toFixed(1)}</AvgScore>
+                <AvgStars>{renderStars(rating)}</AvgStars>
+                <TotalReviewsCount>{totalReviews} đánh giá</TotalReviewsCount>
+              </AvgScoreBox>
+
+              <RatingBars>
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = ratingCounts[star] || 0
+                  const percent = totalReviews > 0 ? Math.round((count / totalReviews) * 100) : 0
+                  return (
+                    <RatingRow key={star}>
+                      <StarLabel>{star} ★</StarLabel>
+                      <ProgressBarContainer>
+                        <ProgressBar $percentage={percent} />
+                      </ProgressBarContainer>
+                      <PercentLabel>{percent}%</PercentLabel>
+                    </RatingRow>
+                  )
+                })}
+              </RatingBars>
+            </RatingSummaryContainer>
+
+            {reviews.length === 0 ? (
+              <StateText style={{ textAlign: 'center', padding: '12px 0' }}>
+                Chưa có đánh giá nào cho sản phẩm này.
+              </StateText>
+            ) : (
+              <ReviewList>
+                {reviews.map((item, index) => {
+                  const reviewerName = item.user?.full_name || item.user?.username || 'Khách hàng'
+                  const initial = reviewerName.charAt(0).toUpperCase()
+                  return (
+                    <ReviewItem key={item.id || `${reviewerName}-${index}`}>
+                      <ReviewHeader>
+                        <Avatar>{initial}</Avatar>
+                        <ReviewMetaInfo>
+                          <ReviewAuthor>{reviewerName}</ReviewAuthor>
+                          <ReviewStars>{renderStars(item.rate || 5)}</ReviewStars>
+                        </ReviewMetaInfo>
+                        <ReviewDate>{formatDate(item.create_at)}</ReviewDate>
+                      </ReviewHeader>
+                      <ReviewContent>{item.comment || item.content || 'Đánh giá không có nội dung.'}</ReviewContent>
+                    </ReviewItem>
+                  )
+                })}
+              </ReviewList>
+            )}
+          </>
+        )}
+      </ListCard>
+    </Wrap>
+  )
+}

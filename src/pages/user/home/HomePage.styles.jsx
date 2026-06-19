@@ -1,6 +1,6 @@
 import styled from 'styled-components'
 import { Link } from 'react-router-dom'
-import { Section, SectionSub, SectionTitle } from '../components/Section'
+import { Section, SectionSub, SectionTitle } from '../../../components/Section'
 
 export const Stack = styled.div`
   display: grid;

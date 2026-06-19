@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { supportRequestsApi } from '../../api/supportRequests'
-import { useAuth } from '../../auth/auth-store'
-import { Section, SectionSub, SectionTitle } from '../../components/Section'
-import { Alert, Btn, CheckoutGrid, CheckoutPanel, FormStack, Input, List, PanelTitle, PrimaryCheckoutButton, Select, SuccessText, Textarea, Wrap } from '../WorkflowPages.styles'
+import { supportRequestsApi } from '../../../api/supportRequests'
+import { useAuth } from '../../../auth/auth-store'
+import { Section, SectionSub, SectionTitle } from '../../../components/Section'
+import { Alert, Btn, CheckoutGrid, CheckoutPanel, FormStack, Input, List, PanelTitle, PrimaryCheckoutButton, Select, SuccessText, Textarea, Wrap } from '../../WorkflowPages.styles'
 
 export function SupportTicketPage() {
   const { user } = useAuth()

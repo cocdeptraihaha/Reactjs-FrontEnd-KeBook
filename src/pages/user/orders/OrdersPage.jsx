@@ -1,10 +1,10 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { cartApi } from '../api/cart'
-import { ordersApi } from '../api/orders'
-import { returnRequestsApi } from '../api/returnRequests'
-import { Section, SectionSub, SectionTitle } from '../components/Section'
+import { cartApi } from '../../../api/cart'
+import { ordersApi } from '../../../api/orders'
+import { returnRequestsApi } from '../../../api/returnRequests'
+import { Section, SectionSub, SectionTitle } from '../../../components/Section'
 import {
   Wrap,
   Tabs,
@@ -114,6 +114,7 @@ function getReceivedDate(order) {
 }
 
 function canReturnOrder(order, status) {
+  if (status === 'SHIPPED' || status === 'DELIVERED') return true
   if (status !== 'COMPLETED') return false
   const receivedAt = new Date(getReceivedDate(order))
   if (Number.isNaN(receivedAt.getTime())) return false
@@ -259,8 +260,11 @@ export function OrderHistoryPage() {
                   {isDelivered(status) && (
                     <ActionBtn type="button" disabled={busyId === order.id} onClick={() => void handleConfirmReceived(order.id)}>Đã nhận hàng</ActionBtn>
                   )}
+                  {(status === 'SHIPPED' || status === 'DELIVERED' || status === 'COMPLETED') && (
+                    <ActionBtn type="button" onClick={() => navigate(`/app/orders/${order.id}?action=return`)}>Trả hàng</ActionBtn>
+                  )}
                   {isTerminalComplete(status) && (
-                    <ActionBtn type="button" onClick={() => navigate('/app/profile/write-review')}>Đánh giá</ActionBtn>
+                    <ActionBtn type="button" onClick={() => navigate('/app/profile/write-review', { state: { orderId: order.id, items: order.order_items } })}>Đánh giá</ActionBtn>
                   )}
                   {isTerminalComplete(status) && (
                     <ActionBtn type="button" disabled={busyId === order.id} onClick={() => void handleRebuy(order)}>Mua lại</ActionBtn>
@@ -277,6 +281,7 @@ export function OrderHistoryPage() {
 
 export function OrderDetailPage() {
   const { id } = useParams()
+  const location = useLocation()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -284,6 +289,11 @@ export function OrderDetailPage() {
   const [returnQuantity, setReturnQuantity] = useState(1)
   const [returnReason, setReturnReason] = useState('')
   const [returnBusy, setReturnBusy] = useState(false)
+
+  const showReturnForm = useMemo(() => {
+    const params = new URLSearchParams(location.search)
+    return params.get('action') === 'return'
+  }, [location.search])
 
   const load = useCallback(async () => {
     try {
@@ -372,7 +382,7 @@ export function OrderDetailPage() {
               </ItemRow>
             ))}
           </ItemList>
-          {returnAllowed && (
+          {returnAllowed && showReturnForm && (
             <ReturnPanel onSubmit={submitReturnRequest}>
               <ReturnTitle>Yêu cầu hoàn trả</ReturnTitle>
               <ReturnGrid>

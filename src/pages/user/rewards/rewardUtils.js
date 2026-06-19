@@ -1,5 +1,5 @@
 import { Gift, Percent, Tag, Truck } from 'react-feather'
-import { formatMoney } from '../../utils/formatters'
+import { formatMoney } from '../../../utils/formatters'
 
 export function getPointBalance(payload) {
   return Number(payload?.balance ?? payload?.points ?? payload?.total_points ?? payload?.available_points ?? 0)

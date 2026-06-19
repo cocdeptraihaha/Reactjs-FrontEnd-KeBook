@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { cartApi } from '../api/cart'
-import { useAuth } from '../auth/auth-store'
-import { CartItem } from '../components/CartItem'
-import { OrderSummary } from '../components/OrderSummary'
-import { Section, SectionSub, SectionTitle } from '../components/Section'
+import { cartApi } from '../../../api/cart'
+import { useAuth } from '../../../auth/auth-store'
+import { CartItem } from '../../../components/CartItem'
+import { OrderSummary } from '../../../components/OrderSummary'
+import { Section, SectionSub, SectionTitle } from '../../../components/Section'
 import {
   Stack,
   Layout,
@@ -119,7 +119,6 @@ export function CartPage() {
         <HeadRow>
           <div>
             <SectionTitle>Cart</SectionTitle>
-            <SectionSub>Mapped from `/cart` + `/cart/summary` contracts, with exact stock and price lines.</SectionSub>
           </div>
           <RetryButton type="button" onClick={() => void loadCart()} disabled={!isAuthenticated || loading}>Refresh</RetryButton>
         </HeadRow>
