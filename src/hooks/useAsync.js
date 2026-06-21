@@ -17,7 +17,11 @@ export function useAsync(task, deps = []) {
       const result = await task()
       setData(result)
     } catch (e) {
-      setError(e.message || 'Request failed')
+      if (e && typeof e === 'object') {
+        setError(e.message || JSON.stringify(e))
+      } else {
+        setError(String(e || 'Request failed'))
+      }
     } finally {
       setLoading(false)
       setRefreshing(false)

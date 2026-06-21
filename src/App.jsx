@@ -15,7 +15,6 @@ import {
   ProfilePage,
   AccountSettingsPage,
   FavoritesPage,
-  PointsHistoryPage,
   MyVouchersPage,
   RewardsPage,
   SupportTicketPage,
@@ -68,7 +67,6 @@ function App() {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="profile/account" element={<AccountSettingsPage />} />
         <Route path="profile/favorites" element={<FavoritesPage />} />
-        <Route path="profile/points-history" element={<PointsHistoryPage />} />
         <Route path="profile/my-vouchers" element={<MyVouchersPage />} />
         <Route path="profile/rewards" element={<RewardsPage />} />
         <Route path="profile/support-ticket" element={<SupportTicketPage />} />

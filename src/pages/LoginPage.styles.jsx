@@ -49,6 +49,15 @@ export const Submit = styled.button`
 
 export const ErrorText = styled.p`
   color: #8f2f3c;
+  background-color: rgba(239, 68, 68, 0.05);
+  border: 1px dashed rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 8px 0;
+  font-size: 0.88rem;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
 `
 
 export const Inline = styled.div`

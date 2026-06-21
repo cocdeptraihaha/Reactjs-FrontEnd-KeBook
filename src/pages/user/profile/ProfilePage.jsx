@@ -94,6 +94,16 @@ function toDateInput(value) {
   return date.toISOString().slice(0, 10)
 }
 
+function formatDOB(value) {
+  if (!value) return 'Thêm ngày sinh'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Thêm ngày sinh'
+  const d = String(date.getDate()).padStart(2, '0')
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const y = date.getFullYear()
+  return `${d}/${m}/${y}`
+}
+
 function profilePayload(values) {
   return {
     full_name: values.full_name || null,
@@ -115,8 +125,12 @@ function accountPayload(values) {
 }
 
 function addressPayload(values) {
+  let label = values.label || 'Nhà riêng'
+  if (label === 'Home') label = 'Nhà riêng'
+  if (label === 'Office') label = 'Văn phòng'
+  if (label === 'Other') label = 'Khác'
   return {
-    label: values.label || 'Home',
+    label,
     recipient_name: values.recipient_name || null,
     phone_number: values.phone_number || null,
     address_detail: values.address_detail || null,
@@ -127,7 +141,7 @@ function addressPayload(values) {
 }
 
 function getDisplayName(profile, user) {
-  return profile?.full_name || user?.full_name || user?.username || 'Customer'
+  return profile?.full_name || user?.full_name || user?.username || 'Khách hàng'
 }
 
 function getPoints(payload) {
@@ -142,13 +156,13 @@ function formatAddress(address) {
   return [address?.address_detail, address?.ward, address?.province].filter(Boolean).join(', ')
 }
 
-const addressLabelOptions = ['Home', 'Office', 'Other']
+const addressLabelOptions = ['Nhà riêng', 'Văn phòng', 'Khác']
 
 function addressKind(address) {
-  const label = address?.label || 'Home'
-  if (label === 'Office') return { label, Icon: Briefcase }
-  if (label === 'Other') return { label, Icon: MapPin }
-  return { label: 'Home', Icon: Home }
+  const label = address?.label || 'Nhà riêng'
+  if (label === 'Văn phòng' || label === 'Office') return { label: 'Văn phòng', Icon: Briefcase }
+  if (label === 'Khác' || label === 'Other') return { label: 'Khác', Icon: MapPin }
+  return { label: 'Nhà riêng', Icon: Home }
 }
 
 const profileDefaults = {
@@ -165,7 +179,7 @@ const profileDefaults = {
 }
 
 const emptyAddress = {
-  label: 'Home',
+  label: 'Nhà riêng',
   recipient_name: '',
   phone_number: '',
   address_detail: '',
@@ -373,7 +387,7 @@ export function ProfilePage() {
     setShowAddressForm(true)
     addressForm.reset({
       ...emptyAddress,
-      label: 'Home',
+      label: 'Nhà riêng',
       recipient_name: profile?.full_name || '',
       phone_number: profile?.phone_number || '',
       is_default: addresses.length === 0,
@@ -387,8 +401,12 @@ export function ProfilePage() {
       ward: address?.ward || '',
     }
     setShowAddressForm(true)
+    let label = address?.label || 'Nhà riêng'
+    if (label === 'Home') label = 'Nhà riêng'
+    if (label === 'Office') label = 'Văn phòng'
+    if (label === 'Other') label = 'Khác'
     addressForm.reset({
-      label: address?.label || 'Home',
+      label,
       recipient_name: address?.recipient_name || '',
       phone_number: address?.phone_number || '',
       address_detail: address?.address_detail || '',
@@ -438,8 +456,8 @@ export function ProfilePage() {
         </AvatarWrap>
         <HeroText>
           <Name>{displayName}</Name>
-          <Muted>{profile?.phone_number || 'No phone number'}</Muted>
-          <Muted>{profile?.email || user?.email || 'No email'}</Muted>
+          <Muted>{profile?.phone_number || 'Chưa cập nhật SĐT'}</Muted>
+          <Muted>{profile?.email || user?.email || 'Chưa cập nhật Email'}</Muted>
         </HeroText>
       </Hero>
 
@@ -448,65 +466,65 @@ export function ProfilePage() {
           <StaticTile>
             <User size={26} />
             <span>
-              <TileLabel>Name</TileLabel>
+              <TileLabel>Họ tên</TileLabel>
               <TileValue>{displayName}</TileValue>
             </span>
           </StaticTile>
           <StaticTile>
             <Phone size={26} />
             <span>
-              <TileLabel>Phone</TileLabel>
-              <TileValue>{profile?.phone_number || 'Add phone'}</TileValue>
+              <TileLabel>Điện thoại</TileLabel>
+              <TileValue>{profile?.phone_number || 'Thêm SĐT'}</TileValue>
             </span>
           </StaticTile>
           <StaticTile>
             <Calendar size={26} />
             <span>
-              <TileLabel>DOB</TileLabel>
-              <TileValue>{toDateInput(profile?.date_of_birth) || 'Add birthday'}</TileValue>
+              <TileLabel>Ngày sinh</TileLabel>
+              <TileValue>{formatDOB(profile?.date_of_birth)}</TileValue>
             </span>
           </StaticTile>
 
           <OutlineButton type="button" onClick={() => setEditingProfile(true)}>
-            <Edit3 size={20} /> Edit profile info
+            <Edit3 size={20} /> Sửa thông tin cá nhân
           </OutlineButton>
           <OutlineButton type="button" as={Link} to="/app/profile/account">
-            <Edit3 size={20} /> Edit account info
+            <Edit3 size={20} /> Sửa thông tin tài khoản
           </OutlineButton>
           <DangerButton type="button" onClick={() => logout()}>
-            <X size={20} /> Logout
+            <X size={20} /> Đăng xuất
           </DangerButton>
         </Column>
 
         <Column>
           <NavTabs aria-label="Profile shortcuts">
-            <NavTab to="/app/orders"><Package size={38} /> Order</NavTab>
-            <NavTab to="/app/profile/favorites"><Star size={40} /> Wishlist</NavTab>
+            <NavTab to="/app/orders"><Package size={38} /> Đơn hàng</NavTab>
+            <NavTab to="/app/profile/favorites"><Star size={40} /> Yêu thích</NavTab>
           </NavTabs>
 
           <PointsCard>
             <div>
-              <Muted>Point</Muted>
+              <Muted>Điểm tích lũy</Muted>
               <PointValue>{pointsQuery.isLoading ? '...' : formatPoints(points)}</PointValue>
             </div>
             <OutlineButton type="button" as={Link} to="/app/profile/rewards">
-              Point Use <ChevronRight size={18} />
+              Đổi quà <ChevronRight size={18} />
             </OutlineButton>
           </PointsCard>
 
           <Card>
             <CardHeader>
-              <CardTitle>Address list</CardTitle>
+              <CardTitle>Danh sách địa chỉ</CardTitle>
               <IconButton type="button" onClick={openNewAddressForm} aria-label="Add address">
                 <Plus size={30} />
               </IconButton>
             </CardHeader>
-            {addressesQuery.isLoading && <EmptyState>Loading addresses...</EmptyState>}
-            {addressesQuery.error && <EmptyState role="alert">{addressesQuery.error.message || 'Failed to load addresses'}</EmptyState>}
+            {addressesQuery.isLoading && <EmptyState>Đang tải địa chỉ...</EmptyState>}
+            {addressesQuery.error && <EmptyState role="alert">{addressesQuery.error.message || 'Lỗi tải địa chỉ'}</EmptyState>}
             {!addressesQuery.isLoading && !addressesQuery.error && addresses.length === 0 && (
               <EmptyState>
-                <strong>No saved address.</strong>
-                <span>Add delivery information once, then reuse it at checkout.</span>
+                <strong>Chưa có địa chỉ lưu sẵn.</strong>
+                <span>Thêm địa chỉ giao hàng để tiện sử dụng khi thanh toán.</span>
               </EmptyState>
             )}
             {addresses.length > 0 && (
@@ -519,7 +537,7 @@ export function ProfilePage() {
                       <AddressMain>
                         <AddressTitle>
                           {label}
-                          {address.is_default && <Badge>Default</Badge>}
+                          {address.is_default && <Badge>Mặc định</Badge>}
                         </AddressTitle>
                         <AddressText>{address.recipient_name}</AddressText>
                         <AddressText>{formatAddress(address)}</AddressText>
@@ -532,7 +550,7 @@ export function ProfilePage() {
                             onClick={() => defaultAddressMutation.mutate(address.id)}
                             disabled={defaultAddressMutation.isPending}
                           >
-                            Set default
+                            Đặt mặc định
                           </SmallAction>
                         )}
                         <IconButton type="button" onClick={() => openEditAddressForm(address)} aria-label="Edit address">
@@ -550,12 +568,12 @@ export function ProfilePage() {
             <Modal
               labelledBy="address-modal-title"
               onClose={closeAddressForm}
-              title={<FormTitle id="address-modal-title">{editingAddress ? 'Edit address' : 'Add address'}</FormTitle>}
+              title={<FormTitle id="address-modal-title">{editingAddress ? 'Sửa địa chỉ' : 'Thêm địa chỉ'}</FormTitle>}
             >
               <form onSubmit={submitAddress}>
                 <FormGrid>
                   <WideField>
-                    <Label>Address type</Label>
+                    <Label>Loại địa chỉ</Label>
                     <Select {...addressForm.register('label')}>
                       {addressLabelOptions.map((option) => (
                         <option key={option} value={option}>{option}</option>
@@ -563,19 +581,19 @@ export function ProfilePage() {
                     </Select>
                   </WideField>
                   <Field>
-                    <Label>Recipient name</Label>
-                    <Input {...addressForm.register('recipient_name', { required: 'Recipient name required' })} />
+                    <Label>Tên người nhận</Label>
+                    <Input {...addressForm.register('recipient_name', { required: 'Vui lòng nhập tên người nhận' })} />
                     {addressForm.formState.errors.recipient_name && <ErrorText>{addressForm.formState.errors.recipient_name.message}</ErrorText>}
                   </Field>
                   <Field>
-                    <Label>Phone number</Label>
-                    <Input {...addressForm.register('phone_number', { required: 'Phone number required' })} />
+                    <Label>Số điện thoại</Label>
+                    <Input {...addressForm.register('phone_number', { required: 'Vui lòng nhập số điện thoại' })} />
                     {addressForm.formState.errors.phone_number && <ErrorText>{addressForm.formState.errors.phone_number.message}</ErrorText>}
                   </Field>
                   <Field>
-                    <Label>Province</Label>
-                    <Select {...addressForm.register('province', { required: 'Province required' })}>
-                      <option value="">Select province</option>
+                    <Label>Tỉnh / Thành phố</Label>
+                    <Select {...addressForm.register('province', { required: 'Vui lòng chọn Tỉnh/Thành' })}>
+                      <option value="">Chọn Tỉnh / Thành phố</option>
                       {selectedProvince && !provincesQuery.data?.some((province) => province.name === selectedProvince) && (
                         <option value={selectedProvince}>{selectedProvince}</option>
                       )}
@@ -586,9 +604,9 @@ export function ProfilePage() {
                     {addressForm.formState.errors.province && <ErrorText>{addressForm.formState.errors.province.message}</ErrorText>}
                   </Field>
                   <Field>
-                    <Label>Ward</Label>
-                    <Select {...addressForm.register('ward', { required: 'Ward required' })}>
-                      <option value="">{selectedProvinceCode ? 'Select ward' : 'Select province first'}</option>
+                    <Label>Phường / Xã / Quận / Huyện</Label>
+                    <Select {...addressForm.register('ward', { required: 'Vui lòng chọn Phường/Xã/Quận/Huyện' })}>
+                      <option value="">{selectedProvinceCode ? 'Chọn Phường / Xã / Quận / Huyện' : 'Vui lòng chọn Tỉnh/Thành trước'}</option>
                       {selectedWard && !wardsQuery.data?.some((ward) => ward.name === selectedWard) && (
                         <option value={selectedWard}>{selectedWard}</option>
                       )}
@@ -599,14 +617,14 @@ export function ProfilePage() {
                     {addressForm.formState.errors.ward && <ErrorText>{addressForm.formState.errors.ward.message}</ErrorText>}
                   </Field>
                   <WideField>
-                    <Label>Address detail</Label>
-                    <Input {...addressForm.register('address_detail', { required: 'Address detail required' })} />
+                    <Label>Địa chỉ chi tiết</Label>
+                    <Input {...addressForm.register('address_detail', { required: 'Vui lòng nhập địa chỉ chi tiết' })} />
                     {addressForm.formState.errors.address_detail && <ErrorText>{addressForm.formState.errors.address_detail.message}</ErrorText>}
                   </WideField>
                   <WideField>
                     <CheckboxRow>
                       <input type="checkbox" {...addressForm.register('is_default')} />
-                      Use as default delivery address
+                      Đặt làm địa chỉ nhận hàng mặc định
                     </CheckboxRow>
                   </WideField>
                 </FormGrid>
@@ -615,7 +633,7 @@ export function ProfilePage() {
                     type="submit"
                     disabled={createAddressMutation.isPending || updateAddressMutation.isPending}
                   >
-                    <Save size={18} /> Save address
+                    <Save size={18} /> Lưu địa chỉ
                   </OutlineButton>
                   {editingAddress?.id && (
                     <DangerButton
@@ -623,11 +641,11 @@ export function ProfilePage() {
                       onClick={() => deleteAddressMutation.mutate(editingAddress.id)}
                       disabled={deleteAddressMutation.isPending}
                     >
-                      <Trash2 size={18} /> Delete
+                      <Trash2 size={18} /> Xóa
                     </DangerButton>
                   )}
                   <OutlineButton type="button" onClick={closeAddressForm}>
-                    <X size={18} /> Cancel
+                    <X size={18} /> Hủy
                   </OutlineButton>
                 </Actions>
                 {addressMutationError && <ErrorText role="alert">{addressMutationError}</ErrorText>}
@@ -644,47 +662,53 @@ export function ProfilePage() {
                 setUploadError('')
                 setLocalAvatarPreview('')
               }}
-              title={<FormTitle id="profile-modal-title">Edit profile info</FormTitle>}
+              title={<FormTitle id="profile-modal-title">Sửa thông tin cá nhân</FormTitle>}
             >
               <form onSubmit={submitProfile}>
                 <FormGrid>
                   <Field>
-                    <Label>Full name</Label>
-                    <Input {...profileForm.register('full_name', { required: 'Full name required' })} />
+                    <Label>Họ và tên</Label>
+                    <Input {...profileForm.register('full_name', { required: 'Vui lòng nhập họ tên' })} />
                     {profileForm.formState.errors.full_name && <ErrorText>{profileForm.formState.errors.full_name.message}</ErrorText>}
                   </Field>
                   <Field>
-                    <Label>Gender</Label>
+                    <Label>Giới tính</Label>
                     <Select {...profileForm.register('gender')}>
-                      <option value="">Select</option>
-                      <option value="MALE">Male</option>
-                      <option value="FEMALE">Female</option>
-                      <option value="OTHER">Other</option>
+                      <option value="">Chọn</option>
+                      <option value="MALE">Nam</option>
+                      <option value="FEMALE">Nữ</option>
+                      <option value="OTHER">Khác</option>
                     </Select>
                   </Field>
                   <Field>
-                    <Label>Date of birth</Label>
+                    <Label>Ngày sinh</Label>
                     <Input type="date" {...profileForm.register('date_of_birth')} />
                   </Field>
                   <WideField>
-                    <Label>Legacy address</Label>
+                    <Label>Địa chỉ cũ (nếu có)</Label>
                     <Input {...profileForm.register('address')} />
                   </WideField>
                   <WideField>
-                    <Label>Avatar URL</Label>
-                    <Input {...profileForm.register('avatar_url')} />
-                  </WideField>
-                  <WideField>
-                    <Label>Upload avatar</Label>
-                    <OutlineButton type="button" as="label">
-                      <Edit3 size={18} /> Choose image
-                      <HiddenInput type="file" accept="image/*" onChange={(event) => void handleAvatarFileChange(event)} />
-                    </OutlineButton>
+                    <Label>Ảnh đại diện</Label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '4px' }}>
+                      <OutlineButton type="button" as="label" style={{ cursor: 'pointer' }}>
+                        <Edit3 size={18} style={{ marginRight: '6px' }} /> Tải ảnh mới từ thiết bị
+                        <HiddenInput type="file" accept="image/*" onChange={(event) => void handleAvatarFileChange(event)} />
+                      </OutlineButton>
+                      {(localAvatarPreview || avatarUrl) && (
+                        <p style={{ fontSize: '12px', color: '#10b981', fontWeight: 600, margin: 0 }}>
+                          ✓ Đã chọn ảnh
+                        </p>
+                      )}
+                    </div>
+                    <p style={{ fontSize: '11px', color: '#64748b', margin: '6px 0 0 0', fontStyle: 'italic' }}>
+                      Hệ thống chỉ chấp nhận tải tệp tin ảnh gốc (.png, .jpg, .webp, v.v.), không sử dụng liên kết URL.
+                    </p>
                   </WideField>
                 </FormGrid>
                 <Actions>
                   <OutlineButton type="submit" disabled={saveProfileMutation.isPending || !profileForm.formState.isDirty}>
-                    <CheckCircle size={18} /> Save changes
+                    <CheckCircle size={18} /> Lưu thay đổi
                   </OutlineButton>
                   <OutlineButton
                     type="button"
@@ -696,13 +720,13 @@ export function ProfilePage() {
                     }}
                     disabled={saveProfileMutation.isPending}
                   >
-                    <X size={18} /> Cancel
+                    <X size={18} /> Hủy
                   </OutlineButton>
                 </Actions>
-                {avatarUploadMutation.isPending && <StatusText>Uploading avatar...</StatusText>}
+                {avatarUploadMutation.isPending && <StatusText>Đang tải ảnh lên...</StatusText>}
                 {uploadError && <ErrorText role="alert">{uploadError}</ErrorText>}
-                {saveProfileMutation.isPending && <StatusText>Saving profile...</StatusText>}
-                {saveProfileMutation.isError && <ErrorText role="alert">{saveProfileMutation.error.message || 'Save failed'}</ErrorText>}
+                {saveProfileMutation.isPending && <StatusText>Đang lưu thông tin cá nhân...</StatusText>}
+                {saveProfileMutation.isError && <ErrorText role="alert">{saveProfileMutation.error.message || 'Lưu thất bại'}</ErrorText>}
               </form>
             </Modal>
           )}
@@ -711,26 +735,25 @@ export function ProfilePage() {
         <Column>
           {(user?.is_superuser === true || String(user?.role || '').toUpperCase() === 'ADMIN') && (
             <AdminPromoCard>
-              <AdminPromoTitle><Shield size={24} /> Admin Workspace</AdminPromoTitle>
+              <AdminPromoTitle><Shield size={24} /> Không gian Admin</AdminPromoTitle>
               <AdminPromoDesc>
-                You have administrative privileges. Access the management panel to oversee orders, stock catalogs, and analyze business performance.
+                Bạn có quyền quản trị viên. Hãy truy cập trang quản lý để quản lý đơn hàng, danh mục sách, kho hàng và phân tích doanh thu.
               </AdminPromoDesc>
               <AdminPromoBtn to="/app/admin/dashboard">
-                Go to Dashboard <ChevronRight size={16} />
+                Đến trang quản lý <ChevronRight size={16} />
               </AdminPromoBtn>
             </AdminPromoCard>
           )}
 
           <SidePanel>
-            <SideLink to="/app/profile/points-history"><Clock size={28} /> History <ChevronRight size={22} /></SideLink>
-            <SideLink to="/app/profile/my-vouchers"><Tag size={28} /> Vouchers <ChevronRight size={22} /></SideLink>
-            <SideLink to="/app/profile/support-ticket"><Headphones size={28} /> Support ticket <ChevronRight size={22} /></SideLink>
+            <SideLink to="/app/profile/my-vouchers"><Tag size={28} /> Ưu đãi của tôi <ChevronRight size={22} /></SideLink>
+            <SideLink to="/app/profile/support-ticket"><Headphones size={28} /> Hỗ trợ / Ticket <ChevronRight size={22} /></SideLink>
           </SidePanel>
         </Column>
       </ProfileCanvas>
 
-      {profileQuery.isLoading && <StatusText>Loading profile...</StatusText>}
-      {profileQuery.error && <ErrorText role="alert">{profileQuery.error.message || 'Failed to load profile'}</ErrorText>}
+      {profileQuery.isLoading && <StatusText>Đang tải thông tin cá nhân...</StatusText>}
+      {profileQuery.error && <ErrorText role="alert">{profileQuery.error.message || 'Lỗi tải thông tin cá nhân'}</ErrorText>}
     </Shell>
   )
 }
@@ -768,7 +791,7 @@ export function AccountSettingsPage() {
     onSuccess: async (updatedUser) => {
       replaceUser?.(updatedUser)
       await queryClient.invalidateQueries({ queryKey: ['me-profile'] })
-      setSuccess('Account info updated.')
+      setSuccess('Thông tin tài khoản đã được cập nhật.')
       accountForm.reset({
         email: updatedUser?.email || '',
         phone_number: updatedUser?.phone_number || '',
@@ -782,7 +805,7 @@ export function AccountSettingsPage() {
   const submitAccount = accountForm.handleSubmit(async (values) => {
     setSuccess('')
     if (values.new_password && values.new_password !== values.confirm_password) {
-      accountForm.setError('confirm_password', { message: 'Password confirmation does not match' })
+      accountForm.setError('confirm_password', { message: 'Mật khẩu xác nhận không khớp' })
       return
     }
     await saveAccountMutation.mutateAsync(values)
@@ -799,22 +822,22 @@ export function AccountSettingsPage() {
           )}
         </AvatarWrap>
         <HeroText>
-          <Name>Account info</Name>
-          <Muted>Re-authentication required before changing Gmail, phone number, or password.</Muted>
+          <Name>Thông tin tài khoản</Name>
+          <Muted>Yêu cầu xác nhận lại mật khẩu trước khi thay đổi Gmail, số điện thoại hoặc mật khẩu.</Muted>
         </HeroText>
       </Hero>
 
       <AccountGrid>
         <FormPanel>
-          <FormTitle>Edit account info</FormTitle>
+          <FormTitle>Sửa thông tin tài khoản</FormTitle>
           <form onSubmit={submitAccount}>
             <FormGrid>
               <WideField>
-                <Label>Current password</Label>
+                <Label>Mật khẩu hiện tại</Label>
                 <Input
                   type="password"
                   autoComplete="current-password"
-                  {...accountForm.register('current_password', { required: 'Current password required' })}
+                  {...accountForm.register('current_password', { required: 'Vui lòng nhập mật khẩu hiện tại' })}
                 />
                 {accountForm.formState.errors.current_password && <ErrorText>{accountForm.formState.errors.current_password.message}</ErrorText>}
               </WideField>
@@ -823,29 +846,29 @@ export function AccountSettingsPage() {
                 <Input
                   type="email"
                   autoComplete="email"
-                  {...accountForm.register('email', { required: 'Email required' })}
+                  {...accountForm.register('email', { required: 'Vui lòng nhập email' })}
                 />
               </Field>
               <Field>
-                <Label>Phone number</Label>
+                <Label>Số điện thoại</Label>
                 <Input autoComplete="tel" {...accountForm.register('phone_number')} />
               </Field>
               <Field>
-                <Label>New password</Label>
+                <Label>Mật khẩu mới</Label>
                 <Input
                   type="password"
                   autoComplete="new-password"
-                  placeholder="Leave blank to keep current password"
-                  {...accountForm.register('new_password', { minLength: { value: 6, message: 'Password must be at least 6 characters' } })}
+                  placeholder="Để trống nếu không muốn đổi mật khẩu"
+                  {...accountForm.register('new_password', { minLength: { value: 6, message: 'Mật khẩu mới phải từ 6 ký tự' } })}
                 />
                 {accountForm.formState.errors.new_password && <ErrorText>{accountForm.formState.errors.new_password.message}</ErrorText>}
               </Field>
               <Field>
-                <Label>Confirm new password</Label>
+                <Label>Xác nhận mật khẩu mới</Label>
                 <Input
                   type="password"
                   autoComplete="new-password"
-                  placeholder="Repeat new password"
+                  placeholder="Nhập lại mật khẩu mới"
                   {...accountForm.register('confirm_password')}
                 />
                 {accountForm.formState.errors.confirm_password && <ErrorText>{accountForm.formState.errors.confirm_password.message}</ErrorText>}
@@ -853,27 +876,27 @@ export function AccountSettingsPage() {
             </FormGrid>
             <Actions>
               <OutlineButton type="submit" disabled={saveAccountMutation.isPending || profileQuery.isLoading}>
-                <Save size={18} /> Save account info
+                <Save size={18} /> Lưu thông tin
               </OutlineButton>
               <OutlineButton type="button" as={Link} to="/app/profile">
-                <ChevronRight size={18} /> Back to profile
+                <ChevronRight size={18} /> Quay lại trang cá nhân
               </OutlineButton>
             </Actions>
-            {profileQuery.isLoading && <StatusText>Loading account...</StatusText>}
-            {saveAccountMutation.isPending && <StatusText>Verifying password and saving...</StatusText>}
+            {profileQuery.isLoading && <StatusText>Đang tải tài khoản...</StatusText>}
+            {saveAccountMutation.isPending && <StatusText>Đang xác thực mật khẩu và lưu...</StatusText>}
             {success && <StatusText>{success}</StatusText>}
-            {profileQuery.error && <ErrorText role="alert">{profileQuery.error.message || 'Failed to load account'}</ErrorText>}
-            {saveAccountMutation.isError && <ErrorText role="alert">{saveAccountMutation.error.message || 'Account update failed'}</ErrorText>}
+            {profileQuery.error && <ErrorText role="alert">{profileQuery.error.message || 'Lỗi tải tài khoản'}</ErrorText>}
+            {saveAccountMutation.isError && <ErrorText role="alert">{saveAccountMutation.error.message || 'Lỗi cập nhật tài khoản'}</ErrorText>}
           </form>
         </FormPanel>
 
         <Card>
           <CardHeader>
-            <CardTitle>Security note</CardTitle>
+            <CardTitle>Lưu ý bảo mật</CardTitle>
           </CardHeader>
           <EmptyState>
-            <strong>Why current password?</strong>
-            <span>Gmail, phone number, and password changes affect sign-in and order contact data, so the page verifies your current credentials first.</span>
+            <strong>Tại sao cần mật khẩu hiện tại?</strong>
+            <span>Thay đổi Gmail, số điện thoại, và mật khẩu trực tiếp ảnh hưởng đến đăng nhập và thông tin nhận hàng, nên hệ thống yêu cầu xác thực tài khoản trước.</span>
           </EmptyState>
         </Card>
       </AccountGrid>

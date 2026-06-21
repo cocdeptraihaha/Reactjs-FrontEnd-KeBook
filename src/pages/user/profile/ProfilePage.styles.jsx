@@ -435,15 +435,31 @@ export const Input = styled.input`
 export const Select = styled.select`
   width: 100%;
   min-height: 44px;
-  padding: 10px 12px;
+  padding: 10px 36px 10px 12px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(185, 170, 150, 0.82);
   background: rgba(255, 253, 248, 0.92);
+  color: var(--text-primary);
+  font-size: 0.94rem;
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231f4d2e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 
   &:focus {
     outline: none;
     border-color: rgba(31, 77, 46, 0.52);
+    background: #fffdf8;
     box-shadow: 0 0 0 4px rgba(31, 77, 46, 0.1);
+  }
+
+  option {
+    background-color: #fffdf8;
+    color: var(--text-primary);
+    padding: 12px;
   }
 `
 
@@ -466,9 +482,16 @@ export const Actions = styled.div`
 `
 
 export const ErrorText = styled.p`
-  margin: 0;
+  margin: 8px 0;
   color: var(--danger-700);
+  background-color: rgba(239, 68, 68, 0.05);
+  border: 1px dashed rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
   font-size: 0.82rem;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
 `
 
 export const StatusText = styled.p`

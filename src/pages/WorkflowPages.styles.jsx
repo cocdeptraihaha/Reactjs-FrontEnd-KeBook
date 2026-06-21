@@ -81,9 +81,17 @@ export const P = styled.p`
   font-size: 0.92rem;
 `
 export const Alert = styled.p`
-  margin: 0;
+  margin: 10px 0;
   color: var(--danger-700);
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
   font-size: 0.92rem;
+  line-height: 1.4;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 `
 export const List = styled.ul`
   margin: 10px 0 0;
