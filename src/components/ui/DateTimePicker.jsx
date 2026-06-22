@@ -13,39 +13,56 @@ const popIn = keyframes`
   }
 `
 
+const popInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+`
+
 const PickerContainer = styled.div`
   position: relative;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   display: inline-block;
   width: 100%;
-  max-width: 280px;
 `
 
 const TriggerButton = styled.button`
   width: 100%;
-  padding: 10px 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(185, 170, 150, 0.4);
-  background-color: #ffffff;
-  color: #334155;
-  font-size: 13.5px;
-  font-weight: 600;
+  padding: 12px;
+  min-height: 46px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(185, 170, 150, 0.82);
+  background-color: rgba(255, 250, 240, 0.86);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
-    border-color: var(--brand-700);
-    background-color: #fdfbf7;
+    border-color: rgba(180, 120, 47, 0.72);
+    background-color: rgba(255, 250, 240, 0.95);
+  }
+
+  &:focus-visible {
+    border-color: rgba(180, 120, 47, 0.72);
+    box-shadow: 0 0 0 4px rgba(180, 120, 47, 0.14);
+    outline: none;
   }
 
   ${props => props.$isOpen && css`
-    border-color: var(--brand-900);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+    border-color: rgba(180, 120, 47, 0.72);
+    box-shadow: 0 0 0 4px rgba(180, 120, 47, 0.14);
     background-color: #ffffff;
   `}
 `
@@ -73,7 +90,15 @@ const ArrowWrap = styled.div`
 
 const PopoverCard = styled.div`
   position: absolute;
-  top: calc(100% + 6px);
+  ${props => props.$position === 'top' ? css`
+    bottom: calc(100% + 6px);
+    top: auto;
+    animation: ${popInUp} 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  ` : css`
+    top: calc(100% + 6px);
+    bottom: auto;
+    animation: ${popIn} 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  `}
   left: 0;
   background-color: #ffffff;
   border: 1px solid rgba(185, 170, 150, 0.3);
@@ -85,7 +110,6 @@ const PopoverCard = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
-  animation: ${popIn} 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 `
 
 const QuickTabs = styled.div`
@@ -130,19 +154,21 @@ const MonthYearLabel = styled.div`
 `
 
 const HeaderSelect = styled.select`
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(185, 170, 150, 0.3);
+  background-color: #fcfaf6;
   font-size: 13.5px;
   font-weight: 800;
   color: #1e293b;
   cursor: pointer;
   outline: none;
-  padding: 2px 4px;
-  border-radius: 6px;
-  transition: background-color 0.15s;
+  padding: 4px 10px;
+  border-radius: 8px;
+  transition: all 0.15s;
+  appearance: auto;
 
   &:hover {
     background-color: #f1f5f9;
+    border-color: rgba(185, 170, 150, 0.6);
   }
 `
 
@@ -203,6 +229,12 @@ const DayCell = styled.button`
 
   &:hover {
     background-color: #f1f5f9;
+  }
+
+  &:disabled {
+    color: #cbd5e1;
+    cursor: not-allowed;
+    background: none !important;
   }
 
   ${props => props.$isToday && css`
@@ -301,18 +333,41 @@ const ActionBtn = styled.button`
   }
 `
 
-export function DateTimePicker({ value, onChange, label = 'Select Date', type = 'date' }) {
+function parseLocalDate(value) {
+  if (!value) return new Date()
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  }
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return new Date()
+  return parsed
+}
+
+export function DateTimePicker({ value, onChange, label = 'Select Date', type = 'date', maxDate }) {
   const [isOpen, setIsOpen] = useState(false)
   const popoverRef = useRef(null)
+
+  const maxDateParsed = useMemo(() => {
+    if (!maxDate) return null
+    const parsed = new Date(maxDate)
+    return Number.isNaN(parsed.getTime()) ? null : parsed
+  }, [maxDate])
 
   // Internal Date State tracking
   const dateObj = useMemo(() => {
     if (!value) return new Date()
-    const parsed = new Date(value)
-    return Number.isNaN(parsed.getTime()) ? new Date() : parsed
-  }, [value])
+    const parsed = parseLocalDate(value)
+    if (Number.isNaN(parsed.getTime())) return new Date()
+    // Enforce maxDate boundary if initialized with value
+    if (maxDateParsed && parsed > maxDateParsed) {
+      return new Date(maxDateParsed.getTime())
+    }
+    return parsed
+  }, [value, maxDateParsed])
 
   const [viewTab, setViewTab] = useState('date') // 'date' | 'time'
+  const [dropdownPosition, setDropdownPosition] = useState('bottom')
   const [currentMonth, setCurrentMonth] = useState(() => dateObj.getMonth())
   const [currentYear, setCurrentYear] = useState(() => dateObj.getFullYear())
 
@@ -329,15 +384,16 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
   // Sync internal Month/Year/Time with value changes
   useEffect(() => {
     if (value) {
-      const parsed = new Date(value)
+      const parsed = parseLocalDate(value)
       if (!Number.isNaN(parsed.getTime())) {
-        setCurrentMonth(parsed.getMonth())
-        setCurrentYear(parsed.getFullYear())
-        setHours(String(parsed.getHours()).padStart(2, '0'))
-        setMinutes(String(parsed.getMinutes()).padStart(2, '0'))
+        const adjustedDate = maxDateParsed && parsed > maxDateParsed ? maxDateParsed : parsed
+        setCurrentMonth(adjustedDate.getMonth())
+        setCurrentYear(adjustedDate.getFullYear())
+        setHours(String(adjustedDate.getHours()).padStart(2, '0'))
+        setMinutes(String(adjustedDate.getMinutes()).padStart(2, '0'))
       }
     }
-  }, [value])
+  }, [value, maxDateParsed])
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -348,6 +404,21 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (isOpen && popoverRef.current) {
+      const rect = popoverRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+      const estimatedHeight = 420 // Estimated height of PopoverCard
+
+      if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
+        setDropdownPosition('top')
+      } else {
+        setDropdownPosition('bottom')
+      }
+    }
+  }, [isOpen])
 
   // Days calculations
   const daysInMonth = useMemo(() => {
@@ -390,6 +461,13 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
   }
 
   const nextMonth = () => {
+    if (maxDateParsed) {
+      const nextM = currentMonth === 11 ? 0 : currentMonth + 1
+      const nextY = currentMonth === 11 ? currentYear + 1 : currentYear
+      if (nextY > maxDateParsed.getFullYear() || (nextY === maxDateParsed.getFullYear() && nextM > maxDateParsed.getMonth())) {
+        return // Do not navigate past maxDate month/year
+      }
+    }
     if (currentMonth === 11) {
       setCurrentMonth(0)
       setCurrentYear(currentYear + 1)
@@ -399,6 +477,12 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
   }
 
   const handleSelectDay = (day) => {
+    if (maxDateParsed) {
+      const selected = new Date(currentYear, currentMonth, day, Number(hours), Number(minutes))
+      if (selected > maxDateParsed) {
+        return
+      }
+    }
     const selected = new Date(currentYear, currentMonth, day, Number(hours), Number(minutes))
     triggerChange(selected)
     if (type === 'date') {
@@ -418,7 +502,10 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
 
   const triggerChange = (date) => {
     if (type === 'date') {
-      onChange(date.toISOString().split('T')[0])
+      const yyyy = date.getFullYear()
+      const mm = String(date.getMonth() + 1).padStart(2, '0')
+      const dd = String(date.getDate()).padStart(2, '0')
+      onChange(`${yyyy}-${mm}-${dd}`)
     } else {
       onChange(date.toISOString())
     }
@@ -427,7 +514,7 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
   const formattedDateDisplay = useMemo(() => {
     if (!value) return 'Chọn thời gian'
     try {
-      const date = new Date(value)
+      const date = parseLocalDate(value)
       if (Number.isNaN(date.getTime())) return value
 
       const locale = 'vi-VN'
@@ -465,7 +552,7 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
           ) : (
             <Clock size={15} style={{ color: 'var(--brand-900)' }} />
           )}
-          <span>{label}: {formattedDateDisplay}</span>
+          <span>{label ? `${label}: ` : ''}{formattedDateDisplay}</span>
         </ValueArea>
         <ArrowWrap $isOpen={isOpen}>
           <ChevronDown size={14} />
@@ -473,7 +560,7 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
       </TriggerButton>
 
       {isOpen && (
-        <PopoverCard>
+        <PopoverCard $position={dropdownPosition}>
           {type === 'datetime-local' && (
             <QuickTabs>
               <TabBtn type="button" $active={viewTab === 'date'} onClick={() => setViewTab('date')}>
@@ -494,22 +581,38 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
                 <MonthYearLabel>
                   <HeaderSelect
                     value={currentMonth}
-                    onChange={(e) => setCurrentMonth(Number(e.target.value))}
+                    onChange={(e) => {
+                      const newMonth = Number(e.target.value)
+                      if (maxDateParsed && currentYear === maxDateParsed.getFullYear() && newMonth > maxDateParsed.getMonth()) {
+                        return
+                      }
+                      setCurrentMonth(newMonth)
+                    }}
                   >
-                    {Array.from({ length: 12 }).map((_, mIdx) => (
-                      <option key={mIdx} value={mIdx}>
-                        Tháng {mIdx + 1}
-                      </option>
-                    ))}
+                    {Array.from({ length: 12 }).map((_, mIdx) => {
+                      const isDisabled = maxDateParsed && currentYear === maxDateParsed.getFullYear() && mIdx > maxDateParsed.getMonth()
+                      return (
+                        <option key={mIdx} value={mIdx} disabled={isDisabled}>
+                          Tháng {mIdx + 1}
+                        </option>
+                      )
+                    })}
                   </HeaderSelect>
                   <HeaderSelect
                     value={currentYear}
-                    onChange={(e) => setCurrentYear(Number(e.target.value))}
+                    onChange={(e) => {
+                      const newYear = Number(e.target.value)
+                      setCurrentYear(newYear)
+                      if (maxDateParsed && newYear === maxDateParsed.getFullYear() && currentMonth > maxDateParsed.getMonth()) {
+                        setCurrentMonth(maxDateParsed.getMonth())
+                      }
+                    }}
                   >
-                    {Array.from({ length: 21 }).map((_, yIdx) => {
-                      const yr = new Date().getFullYear() - 10 + yIdx
+                    {Array.from({ length: 100 }).map((_, yIdx) => {
+                      const yr = new Date().getFullYear() - 99 + yIdx
+                      const isDisabled = maxDateParsed && yr > maxDateParsed.getFullYear()
                       return (
-                        <option key={yr} value={yr}>
+                        <option key={yr} value={yr} disabled={isDisabled}>
                           {yr}
                         </option>
                       )
@@ -543,6 +646,12 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
                   const today = new Date()
                   const isToday = day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()
 
+                  let isDisabled = false
+                  if (maxDateParsed) {
+                    const thisDate = new Date(currentYear, currentMonth, day, 23, 59, 59)
+                    isDisabled = thisDate > maxDateParsed
+                  }
+
                   return (
                     <DayCell
                       key={`day-${day}`}
@@ -550,7 +659,8 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
                       $isCurrentMonth={true}
                       $isSelected={isSelected}
                       $isToday={isToday}
-                      onClick={() => handleSelectDay(day)}
+                      disabled={isDisabled}
+                      onClick={() => !isDisabled && handleSelectDay(day)}
                     >
                       {day}
                     </DayCell>

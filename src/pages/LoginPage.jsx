@@ -9,7 +9,7 @@ import {
   Input,
   Submit,
   ErrorText,
-  Inline
+  SecondaryButton
 } from './LoginPage.styles'
 
 export function LoginPage() {
@@ -39,11 +39,10 @@ export function LoginPage() {
   return (
     <Wrap>
       <Section>
-        <SectionTitle>Login</SectionTitle>
-        <SectionSub>Use email or username and password from backend account.</SectionSub>
+        <SectionTitle>Đăng nhập</SectionTitle>
         <Form onSubmit={onSubmit} aria-label="Login form">
           <Label htmlFor="login-username">
-            Email or Username
+            Email hoặc Tên đăng nhập
             <Input
               id="login-username"
               name="username"
@@ -54,7 +53,12 @@ export function LoginPage() {
             />
           </Label>
           <Label htmlFor="login-password">
-            Password
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Mật khẩu</span>
+              <Link to="/auth/forgot-password" style={{ fontSize: '0.8rem', textTransform: 'none', fontWeight: 600, color: 'var(--brand-900)' }}>
+                Quên mật khẩu?
+              </Link>
+            </div>
             <Input
               id="login-password"
               name="password"
@@ -67,14 +71,13 @@ export function LoginPage() {
           </Label>
           {error && <ErrorText role="alert">{error}</ErrorText>}
           <Submit type="submit" disabled={loading} aria-busy={loading}>
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </Submit>
         </Form>
+        <SecondaryButton as={Link} to="/auth/register">
+          Đăng ký tài khoản mới
+        </SecondaryButton>
       </Section>
-      <Inline>
-        <Link to="/auth/register">Register</Link>
-        <Link to="/auth/forgot-password">Forgot password</Link>
-      </Inline>
     </Wrap>
   )
 }

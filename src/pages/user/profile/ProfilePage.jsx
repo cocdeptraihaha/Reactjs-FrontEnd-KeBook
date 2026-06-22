@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useForm, useWatch } from 'react-hook-form'
+import { useForm, useWatch, Controller } from 'react-hook-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Briefcase,
@@ -30,6 +30,7 @@ import { uploadApi } from '../../../api/upload'
 import { usersApi } from '../../../api/users'
 import { useAuth } from '../../../auth/auth-store'
 import { Modal } from '../../../components/ui/Modal'
+import { DateTimePicker } from '../../../components/ui/DateTimePicker'
 import {
   Shell,
   ProfileCanvas,
@@ -89,14 +90,24 @@ import {
 
 function toDateInput(value) {
   if (!value) return ''
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
-  return date.toISOString().slice(0, 10)
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
 }
 
 function formatDOB(value) {
   if (!value) return 'Thêm ngày sinh'
-  const date = new Date(value)
+  let date
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-').map(Number)
+    date = new Date(y, m - 1, d)
+  } else {
+    date = new Date(value)
+  }
   if (Number.isNaN(date.getTime())) return 'Thêm ngày sinh'
   const d = String(date.getDate()).padStart(2, '0')
   const m = String(date.getMonth() + 1).padStart(2, '0')
@@ -682,7 +693,19 @@ export function ProfilePage() {
                   </Field>
                   <Field>
                     <Label>Ngày sinh</Label>
-                    <Input type="date" {...profileForm.register('date_of_birth')} />
+                    <Controller
+                      control={profileForm.control}
+                      name="date_of_birth"
+                      render={({ field }) => (
+                        <DateTimePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          label=""
+                          type="date"
+                          maxDate={new Date()}
+                        />
+                      )}
+                    />
                   </Field>
                   <WideField>
                     <Label>Địa chỉ cũ (nếu có)</Label>
@@ -701,9 +724,6 @@ export function ProfilePage() {
                         </p>
                       )}
                     </div>
-                    <p style={{ fontSize: '11px', color: '#64748b', margin: '6px 0 0 0', fontStyle: 'italic' }}>
-                      Hệ thống chỉ chấp nhận tải tệp tin ảnh gốc (.png, .jpg, .webp, v.v.), không sử dụng liên kết URL.
-                    </p>
                   </WideField>
                 </FormGrid>
                 <Actions>
@@ -747,7 +767,7 @@ export function ProfilePage() {
 
           <SidePanel>
             <SideLink to="/app/profile/my-vouchers"><Tag size={28} /> Ưu đãi của tôi <ChevronRight size={22} /></SideLink>
-            <SideLink to="/app/profile/support-ticket"><Headphones size={28} /> Hỗ trợ / Ticket <ChevronRight size={22} /></SideLink>
+            <SideLink to="/app/profile/support"><Headphones size={28} /> Hỗ trợ / Gửi yêu cầu <ChevronRight size={22} /></SideLink>
           </SidePanel>
         </Column>
       </ProfileCanvas>
