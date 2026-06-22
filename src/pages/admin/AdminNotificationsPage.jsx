@@ -47,11 +47,17 @@ export function AdminNotificationsPage() {
     try {
       setLoading(true)
       const [notifsData, usersData] = await Promise.all([
-        notificationsApi.adminList({ limit: 50 }),
-        usersApi.listAll({ limit: 100 })
+        notificationsApi.adminList({ limit: 50 }).catch(err => {
+          console.error('Error fetching admin notifications:', err)
+          return []
+        }),
+        usersApi.listAll({ limit: 100 }).catch(err => {
+          console.error('Error fetching admin users:', err)
+          return []
+        })
       ])
-      setNotifications(notifsData || [])
-      setUsers(usersData || [])
+      setNotifications(Array.isArray(notifsData) ? notifsData : [])
+      setUsers(Array.isArray(usersData) ? usersData : [])
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu thông báo:', err)
     } finally {

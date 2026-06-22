@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { booksApi } from '../../../api/books'
 import { categoriesApi } from '../../../api/categories'
 import heroArt from '../../../assets/hero.png'
@@ -29,7 +30,14 @@ import {
   PagerBtn,
   PagerText,
   SearchShell,
-  Search
+  Search,
+  BannerSliderContainer,
+  BannerSlide,
+  BannerImage,
+  BannerOverlay,
+  BannerTitle,
+  BannerDots,
+  BannerDot
 } from './HomePage.styles'
 
 function asNumber(value, fallback = 0) {
@@ -125,7 +133,6 @@ function AutoBookSlider({ books, getBadge, badgeTone }) {
 }
 
 export function HomePage() {
-  const [books, setBooks] = useState([])
   const [discountBooks, setDiscountBooks] = useState([])
   const [bestSellerBooks, setBestSellerBooks] = useState([])
   const [categories, setCategories] = useState([])
@@ -134,84 +141,166 @@ export function HomePage() {
   const [gridMode, setGridMode] = useState('medium')
   const [page, setPage] = useState(1)
   const pageSize = gridMode === 'medium' ? 25 : 24
+  const [banners, setBanners] = useState([])
+  const [activeBannerIdx, setActiveBannerIdx] = useState(0)
+
+  const { data: booksRes, isLoading: pagingLoading, error: pagingError, refetch } = useQuery({
+    queryKey: ['books-catalog', page, pageSize],
+    queryFn: () => booksApi.list({ page, size: pageSize }),
+    staleTime: 60_000,
+  })
+
+  const books = booksRes?.data || []
+  const totalPages = booksRes?.page?.pages || 1
 
   const colsByMode = {
     small: 6,
     medium: 5,
     big: 4,
   }
-  const totalPages = Math.max(1, Math.ceil(books.length / pageSize))
-  const start = (page - 1) * pageSize
-  const currentBooks = books.slice(start, start + pageSize)
 
-  async function load() {
+  // Load non-paging data once on mount
+  async function loadInitialData() {
     try {
       setLoading(true)
       setError('')
-      const [booksRes, categoriesRootsRes, topDiscountedRes, topSellingRes] = await Promise.all([
-        booksApi.list({ size: 60 }),
+
+      const [categoriesRootsRes, topDiscountedRes, topSellingRes] = await Promise.all([
         categoriesApi.listRoots().catch(() => categoriesApi.list()),
         booksApi.topDiscounted(8).catch(() => []),
         booksApi.topSelling(8).catch(() => []),
       ])
-      const allBooks = booksRes?.data || []
-      setBooks(allBooks)
-      setPage(1)
+
       setCategories(categoriesRootsRes || [])
-      setDiscountBooks(Array.isArray(topDiscountedRes) && topDiscountedRes.length > 0 ? topDiscountedRes : fallbackTopDiscounted(allBooks))
-      setBestSellerBooks(Array.isArray(topSellingRes) && topSellingRes.length > 0 ? topSellingRes : fallbackTopSelling(allBooks))
+
+      // If either top endpoint is empty/fails, fetch a pool of up to 100 books for fallback computation
+      let fallbackPool = []
+      const needsFallback =
+        !Array.isArray(topDiscountedRes) || topDiscountedRes.length === 0 ||
+        !Array.isArray(topSellingRes) || topSellingRes.length === 0
+
+      if (needsFallback) {
+        try {
+          const res = await booksApi.list({ size: 100 })
+          fallbackPool = res?.data || []
+        } catch (err) {
+          console.error('Fallback pool load failed:', err)
+        }
+      }
+
+      setDiscountBooks(
+        Array.isArray(topDiscountedRes) && topDiscountedRes.length > 0
+          ? topDiscountedRes
+          : fallbackTopDiscounted(fallbackPool)
+      )
+      setBestSellerBooks(
+        Array.isArray(topSellingRes) && topSellingRes.length > 0
+          ? topSellingRes
+          : fallbackTopSelling(fallbackPool)
+      )
+
+      // Load banners from localStorage
+      const storedBanners = localStorage.getItem('homepage_banners')
+      if (storedBanners) {
+        try {
+          setBanners(JSON.parse(storedBanners))
+        } catch (err) {
+          console.error(err)
+        }
+      }
     } catch (e) {
-      setError(e.message || 'Failed to load data')
+      setError(e.message || 'Failed to load initial data')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      void load()
-    }, 0)
-    return () => clearTimeout(timer)
+    void loadInitialData()
   }, [])
+
+  // Reset page to 1 if grid mode changes
+  useEffect(() => {
+    setPage(1)
+  }, [gridMode])
+
+  // Auto-play for banners
+  useEffect(() => {
+    if (banners.length <= 1) return undefined
+    const interval = setInterval(() => {
+      setActiveBannerIdx((prev) => (prev + 1) % banners.length)
+    }, 6000)
+    return () => clearInterval(interval)
+  }, [banners.length])
 
   return (
     <Stack>
-      <Hero>
-        <HeroCopy>
-          <Kicker>Curated bookstore</Kicker>
-          <SectionTitle>Find your next shelf-worthy read.</SectionTitle>
-          <SectionSub>
-            Browse fresh arrivals, trusted categories, and reader favorites in a quieter bookstore interface built for discovery.
-          </SectionSub>
-          <HeroActions>
-            <HeroBtn to="/app/search" $primary>Search Books</HeroBtn>
-            <HeroBtn to="/app/cart">Open Cart</HeroBtn>
-          </HeroActions>
-        </HeroCopy>
-        <HeroMedia aria-hidden="true">
-          <img src={heroArt} alt="" />
-        </HeroMedia>
-      </Hero>
+      {banners.length > 0 ? (
+        <BannerSliderContainer>
+          {banners.map((banner, idx) => (
+            <BannerSlide
+              key={banner.id}
+              to={banner.link_url || '/app/search'}
+              $active={idx === activeBannerIdx}
+            >
+              <BannerImage src={banner.image_url} alt={banner.title || 'Banner'} />
+              {banner.title && (
+                <BannerOverlay>
+                  <BannerTitle>{banner.title}</BannerTitle>
+                </BannerOverlay>
+              )}
+            </BannerSlide>
+          ))}
+          {banners.length > 1 && (
+            <BannerDots>
+              {banners.map((_, idx) => (
+                <BannerDot
+                  key={idx}
+                  $active={idx === activeBannerIdx}
+                  type="button"
+                  onClick={() => setActiveBannerIdx(idx)}
+                />
+              ))}
+            </BannerDots>
+          )}
+        </BannerSliderContainer>
+      ) : (
+        <Hero>
+          <HeroCopy>
+            <Kicker>Curated bookstore</Kicker>
+            <SectionTitle>Find your next shelf-worthy read.</SectionTitle>
+            <SectionSub>
+              Browse fresh arrivals, trusted categories, and reader favorites in a quieter bookstore interface built for discovery.
+            </SectionSub>
+            <HeroActions>
+              <HeroBtn to="/app/search" $primary>Search Books</HeroBtn>
+              <HeroBtn to="/app/cart">Open Cart</HeroBtn>
+            </HeroActions>
+          </HeroCopy>
+          <HeroMedia aria-hidden="true">
+            <img src={heroArt} alt="" />
+          </HeroMedia>
+        </Hero>
+      )}
 
       <Section>
         <SectionHead>
-          <SectionTitle>Categories</SectionTitle>
-          <SectionCta to="/app/home">See all</SectionCta>
+          <SectionTitle>Danh mục</SectionTitle>
         </SectionHead>
-        {loading && <StateText>Loading categories...</StateText>}
+        {loading && <StateText>Đang tải...</StateText>}
         {!loading && error && (
           <>
             <StateText role="alert">Error: {error}</StateText>
             <RetryButton type="button" onClick={() => void load()}>Retry</RetryButton>
           </>
         )}
-        {!loading && !error && categories.length === 0 && <StateText>No categories available.</StateText>}
+        {!loading && !error && categories.length === 0 && <StateText>Không có danh mục nào.</StateText>}
         {!loading && !error && categories.length > 0 && (
           <CategoryList>
             {categories.map((item) => (
               <CategoryChip
                 as={Link}
-                to="/app/categories"
+                to={`/app/search?category=${item.id}`}
                 key={item.id || item.slug || item.name}
               >
                 {item.name}
@@ -227,10 +316,10 @@ export function HomePage() {
             <SectionTitle>Giảm giá nhiều</SectionTitle>
             <SectionSub>Sách có ưu đãi cao nhất từ chương trình giảm giá đang hoạt động.</SectionSub>
           </div>
-          <SectionCta to="/app/catalog">View catalog</SectionCta>
+          <SectionCta to="/app/catalog">Xem tất cả</SectionCta>
         </SectionHead>
-        {loading && <StateText>Loading deals...</StateText>}
-        {!loading && !error && discountBooks.length === 0 && <StateText>No discounted books available.</StateText>}
+        {loading && <StateText>Đang tải...</StateText>}
+        {!loading && !error && discountBooks.length === 0 && <StateText>Không có sách nào được giảm giá.</StateText>}
         {!loading && !error && discountBooks.length > 0 && (
           <AutoBookSlider
             books={discountBooks}
@@ -246,10 +335,10 @@ export function HomePage() {
             <SectionTitle>Sách bán chạy</SectionTitle>
             <SectionSub>Ưu tiên theo số người mua, sau đó tới đánh giá và lượt xem.</SectionSub>
           </div>
-          <SectionCta to="/app/catalog">View catalog</SectionCta>
+          <SectionCta to="/app/catalog">Xem tất cả</SectionCta>
         </SectionHead>
-        {loading && <StateText>Loading best sellers...</StateText>}
-        {!loading && !error && bestSellerBooks.length === 0 && <StateText>No best sellers available.</StateText>}
+        {loading && <StateText>Đang tải...</StateText>}
+        {!loading && !error && bestSellerBooks.length === 0 && <StateText>Không có sách bán chạy nào.</StateText>}
         {!loading && !error && bestSellerBooks.length > 0 && (
           <AutoBookSlider
             books={bestSellerBooks}
@@ -263,26 +352,25 @@ export function HomePage() {
 
       <Section>
         <SectionHead>
-          <SectionTitle>Books</SectionTitle>
+          <SectionTitle>Toàn bộ sách</SectionTitle>
           <GridModeControl>
             <GridModeBtn type="button" $active={gridMode === 'small'} onClick={() => setGridMode('small')}>Small</GridModeBtn>
             <GridModeBtn type="button" $active={gridMode === 'medium'} onClick={() => setGridMode('medium')}>Medium</GridModeBtn>
             <GridModeBtn type="button" $active={gridMode === 'big'} onClick={() => setGridMode('big')}>Big</GridModeBtn>
-            <SectionCta to="/app/home">View list</SectionCta>
           </GridModeControl>
         </SectionHead>
-        {loading && <StateText>Loading books...</StateText>}
-        {!loading && error && (
+        {(loading || pagingLoading) && <StateText>Đang tải...</StateText>}
+        {!(loading || pagingLoading) && (error || pagingError) && (
           <>
-            <StateText role="alert">Error: {error}</StateText>
-            <RetryButton type="button" onClick={() => void load()}>Retry</RetryButton>
+            <StateText role="alert">Error: {error || pagingError?.message}</StateText>
+            <RetryButton type="button" onClick={() => void refetch()}>Retry</RetryButton>
           </>
         )}
-        {!loading && !error && books.length === 0 && <StateText>No books available.</StateText>}
-        {!loading && !error && books.length > 0 && (
+        {!(loading || pagingLoading) && !error && books.length === 0 && <StateText>Không có sách nào.</StateText>}
+        {!(loading || pagingLoading) && !error && books.length > 0 && (
           <>
             <Books $cols={colsByMode[gridMode]}>
-              {currentBooks.map((book, index) => (
+              {books.map((book, index) => (
                 <ProductCard book={book} key={book.id || `${book.title}-${index}`} />
               ))}
             </Books>

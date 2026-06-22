@@ -14,6 +14,10 @@ export const booksApi = {
     if (params.category_id) query.set('category_id', String(params.category_id))
     if (params.page) query.set('page', String(params.page))
     if (params.size) query.set('size', String(params.size))
+    if (params.min_price) query.set('min_price', String(params.min_price))
+    if (params.max_price) query.set('max_price', String(params.max_price))
+    if (params.min_rating) query.set('min_rating', String(params.min_rating))
+    if (params.publisher) query.set('publisher', params.publisher)
     const suffix = query.toString() ? `?${query.toString()}` : ''
     const res = await apiClient.get(`/books/${suffix}`)
     const page = normalizePage(res)
@@ -51,6 +55,9 @@ export const booksApi = {
       page,
       raw: res,
     }
+  },
+  adminLowStock: async (threshold = 5, limit = 50) => {
+    return apiClient.get(`/books/admin/low-stock?threshold=${threshold}&limit=${limit}`)
   },
   categories: {
     update: (bookId, payload) => apiClient.put(`/books/${bookId}/categories`, payload),

@@ -163,9 +163,9 @@ export function BookDetailPage() {
       await cartApi.add({ book_id: Number(id), quantity: 1 })
       navigate('/app/cart')
     } catch (e) {
-      const message = e.message || 'Cannot add more than available stock'
+      const message = e.message || 'Không thể thêm quá số lượng tồn kho'
       setActionError(message)
-      toast.error('Stock limit reached', { description: message })
+      toast.error('Vượt quá số lượng tồn kho', { description: message })
     }
   }
 
@@ -206,15 +206,15 @@ export function BookDetailPage() {
           )}
         </div>
         <div>
-          <SectionTitle>Book Detail</SectionTitle>
-          {loading && <StateText>Loading detail...</StateText>}
+          <SectionTitle>Chi tiết sách</SectionTitle>
+          {loading && <StateText>Đang tải chi tiết...</StateText>}
           {!loading && error && (
             <>
-              <StateText role="alert">Error: {error}</StateText>
-              <RetryButton type="button" onClick={() => void load()}>Retry</RetryButton>
+              <StateText role="alert">Lỗi: {error}</StateText>
+              <RetryButton type="button" onClick={() => void load()}>Thử lại</RetryButton>
             </>
           )}
-          {!loading && !error && !book && <StateText>Book not found.</StateText>}
+          {!loading && !error && !book && <StateText>Không tìm thấy sách.</StateText>}
           {!loading && !error && book && (
             <>
               <BookTitle>{book.title}</BookTitle>
@@ -238,7 +238,7 @@ export function BookDetailPage() {
                 )}
               </PriceRow>
 
-              {actionError && <StateText role="alert">Error: {actionError}</StateText>}
+              {actionError && <StateText role="alert">Lỗi: {actionError}</StateText>}
               <Actions>
                 <PrimaryBtn type="button" onClick={handleAddToCart} disabled={!inStock}>
                   {isAuthenticated ? (inStock ? 'Thêm vào giỏ hàng' : 'Hết hàng') : 'Đăng nhập để mua'}
@@ -311,9 +311,9 @@ export function BookDetailPage() {
       )}
 
       <ListCard>
-        <SectionTitle>Similar Books</SectionTitle>
-        {loading && <StateText>Loading similar books...</StateText>}
-        {!loading && !error && similar.length === 0 && <StateText>No similar books.</StateText>}
+        <SectionTitle>Sách tương tự</SectionTitle>
+        {loading && <StateText>Đang tải sách tương tự...</StateText>}
+        {!loading && !error && similar.length === 0 && <StateText>Không có sách tương tự.</StateText>}
         {!loading && !error && similar.length > 0 && (
           <SimilarViewport ref={similarViewportRef}>
             <SimilarGrid>
@@ -327,7 +327,7 @@ export function BookDetailPage() {
 
       <ListCard>
         <SectionTitle>Đánh giá & Nhận xét</SectionTitle>
-        {loading && <StateText>Loading reviews...</StateText>}
+        {loading && <StateText>Đang tải đánh giá...</StateText>}
         {!loading && !error && (
           <>
             <RatingSummaryContainer>

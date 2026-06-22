@@ -5,11 +5,11 @@ import { AppLayout } from './components/AppLayout'
 import { LoginPage } from './pages/LoginPage'
 import {
   HomePage,
-  CategoryPage,
   SearchPage,
   BookDetailPage,
   CartPage,
   CheckoutPage,
+  VNPayCallbackPage,
   OrderDetailPage,
   OrderHistoryPage,
   ProfilePage,
@@ -26,6 +26,7 @@ import {
   AdminUsersPage,
   AdminNotificationsPage,
   AdminPromotionsPage,
+  AdminBookDiscountsPage,
   AuthGatePage,
   ForgotPasswordPage,
   RegisterPage,
@@ -57,7 +58,6 @@ function App() {
         <Route index element={<Navigate to="/app/home" replace />} />
         <Route path="home" element={<HomePage />} />
         <Route path="search" element={<SearchPage />} />
-        <Route path="categories" element={<CategoryPage />} />
         <Route path="book/:id" element={<BookDetailPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="cart" element={<CartPage />} />
@@ -69,7 +69,7 @@ function App() {
         <Route path="profile/favorites" element={<FavoritesPage />} />
         <Route path="profile/my-vouchers" element={<MyVouchersPage />} />
         <Route path="profile/rewards" element={<RewardsPage />} />
-        <Route path="profile/support-ticket" element={<SupportTicketPage />} />
+        <Route path="profile/support" element={<SupportTicketPage />} />
         <Route path="profile/write-review" element={<WriteReviewPage />} />
         <Route
           path="admin/orders"
@@ -119,9 +119,25 @@ function App() {
             </RequireRole>
           )}
         />
+        <Route
+          path="admin/book-discounts"
+          element={(
+            <RequireRole role="ADMIN">
+              <Navigate to="/app/admin/books/new?tab=book-discounts" replace />
+            </RequireRole>
+          )}
+        />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
+      <Route
+        path="/payment/vnpay-callback"
+        element={(
+          <RequireAuth>
+            <VNPayCallbackPage />
+          </RequireAuth>
+        )}
+      />
     </Routes>
   )
 }

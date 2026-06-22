@@ -171,7 +171,7 @@ export const IconLink = styled(Link)`
 
 export const AuthBox = styled.div`
   display: flex;
-  gap: 8px;
+  gap: 12px;
   align-items: center;
   min-width: 0;
 `
@@ -183,6 +183,31 @@ export const AuthText = styled.span`
   white-space: nowrap;
   font-size: 0.78rem;
   color: var(--text-secondary);
+`
+
+export const NavAvatar = styled.img`
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid rgba(30, 74, 42, 0.25);
+  background-color: rgba(185, 170, 150, 0.1);
+  flex-shrink: 0;
+`
+
+export const NavAvatarFallback = styled.div`
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(30, 74, 42, 0.25);
+  background-color: rgba(46, 106, 59, 0.1);
+  color: var(--brand-900);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  flex-shrink: 0;
 `
 
 export const AuthButton = styled.button`
@@ -293,6 +318,15 @@ export const NotiCard = styled.li`
   padding: 12px;
   display: grid;
   gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--brand-700);
+    background: ${(p) => (p.$unread ? '#fdfbf7' : '#f4eee0')};
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(30, 74, 42, 0.05);
+  }
 `
 
 export const NotiTop = styled.div`
@@ -342,4 +376,143 @@ export const StateText = styled.p`
   margin: 0;
   padding: 12px;
   color: var(--text-secondary);
+`
+
+/* Search bar inside user navbar styling */
+export const SearchWrapper = styled.div`
+  position: relative;
+  width: 260px;
+  max-width: 100%;
+
+  @media (max-width: 1024px) {
+    width: 200px;
+  }
+
+  @media (max-width: 760px) {
+    display: none; /* Hide on mobile to keep compact, let search page handle it */
+  }
+`
+
+export const SearchBox = styled.div`
+  display: flex;
+  align-items: center;
+  background-color: rgba(185, 170, 150, 0.08);
+  border: 1px solid rgba(185, 170, 150, 0.4);
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  gap: 8px;
+  transition: all 0.2s ease;
+
+  &:focus-within {
+    background-color: #ffffff;
+    border-color: var(--brand-700);
+    box-shadow: 0 0 0 3px rgba(30, 74, 42, 0.12);
+  }
+`
+
+export const SearchInput = styled.input`
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  width: 100%;
+
+  &::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.65;
+  }
+`
+
+export const DropdownMenu = styled.div`
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  width: 320px;
+  background-color: #ffffff;
+  border: 1px solid rgba(185, 170, 150, 0.4);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+  z-index: 110;
+`
+
+export const ResultItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(185, 170, 150, 0.15);
+  transition: background-color 0.15s ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: rgba(46, 106, 59, 0.05);
+  }
+`
+
+export const BookThumb = styled.img`
+  width: 32px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: var(--radius-xs);
+  background-color: rgba(185, 170, 150, 0.1);
+  border: 1px solid rgba(185, 170, 150, 0.2);
+  flex-shrink: 0;
+`
+
+export const BookInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+`
+
+export const BookTitleText = styled.span`
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+
+export const BookAuthorText = styled.span`
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+`
+
+export const BookPriceText = styled.span`
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--brand-900);
+  margin-top: 1px;
+`
+
+export const ResultStatusText = styled.span`
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background-color: ${props => props.$isOutOfStock ? '#fee2e2' : '#dcfce7'};
+  color: ${props => props.$isOutOfStock ? '#be123c' : '#15803d'};
+  flex-shrink: 0;
+`
+
+export const NoResultsItem = styled.div`
+  padding: 14px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  text-align: center;
+  font-weight: 500;
 `

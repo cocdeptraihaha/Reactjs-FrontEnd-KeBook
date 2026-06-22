@@ -612,7 +612,3 @@ export const CompactCheckboxGrid = styled.div`
   padding: 12px;
   background-color: #ffffff;
 `
-
-
-
-

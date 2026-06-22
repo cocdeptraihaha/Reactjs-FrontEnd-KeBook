@@ -270,3 +270,53 @@ export const TagSearchBox = styled.input`
   font-size: 0.8rem;
   outline: none;
 `
+
+export const SearchBarContainer = styled.div`
+  background: var(--surface-card);
+  border: 1px solid rgba(185, 170, 150, 0.4);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+`
+
+export const SearchActionButton = styled.button`
+  background: var(--brand-900);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease-in-out;
+
+  &:hover {
+    background: var(--brand-800);
+  }
+`
+
+export const AdvancedToggleBtn = styled.button`
+  background: ${(p) => (p.$active ? 'rgba(185, 170, 150, 0.25)' : 'transparent')};
+  color: var(--brand-900);
+  border: 1px solid rgba(185, 170, 150, 0.4);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease-in-out;
+
+  &:hover {
+    background: rgba(185, 170, 150, 0.15);
+  }
+`

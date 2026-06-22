@@ -24,7 +24,7 @@ export const Card = styled(Link)`
 export const Cover = styled.div`
   position: relative;
   width: 100%;
-  flex: 0 0 58%;
+  flex: 0 0 52%;
   background:
     linear-gradient(145deg, rgba(31, 77, 46, 0.14), rgba(164, 72, 97, 0.11)),
     #ece4d6;
@@ -34,7 +34,7 @@ export const Cover = styled.div`
 export const CoverImg = styled.img`
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
   transition: transform 0.42s ease;
 
@@ -92,9 +92,13 @@ export const Meta = styled.p`
 
 export const Rating = styled.p`
   margin: 0;
-  font-size: 0.7rem;
-  color: var(--text-secondary);
+  font-size: 0.72rem;
+  color: #d97706;
+  font-weight: 700;
   line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 `
 
 export const Price = styled.p`

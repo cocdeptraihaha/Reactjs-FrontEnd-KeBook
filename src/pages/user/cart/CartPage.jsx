@@ -71,9 +71,9 @@ export function CartPage() {
     if (!cartId || nextQty < 1) return
     const stock = Number(item?.stock_quantity || 0)
     if (stock > 0 && nextQty > stock) {
-      const message = `Only ${stock} item${stock === 1 ? '' : 's'} available in stock.`
+      const message = `Chỉ còn ${stock} sản phẩm trong kho.`
       setError(message)
-      toast.error('Stock limit reached', { description: message })
+      toast.error('Vượt quá số lượng trong kho', { description: message })
       return
     }
 
@@ -83,9 +83,9 @@ export function CartPage() {
       await cartApi.update(cartId, { quantity: nextQty })
       await loadCart(true)
     } catch (e) {
-      const message = e.message || 'Failed to update quantity'
+      const message = e.message || 'Cập nhật số lượng thất bại'
       setError(message)
-      toast.error('Cart update failed', { description: message })
+      toast.error('Thất bại', { description: message })
     } finally {
       setBusyItemId(null)
     }
@@ -101,7 +101,7 @@ export function CartPage() {
       await cartApi.remove(cartId)
       await loadCart(true)
     } catch (e) {
-      setError(e.message || 'Failed to remove item')
+      setError(e.message || 'Xóa sản phẩm thất bại')
     } finally {
       setBusyItemId(null)
     }
@@ -118,9 +118,9 @@ export function CartPage() {
       <Section>
         <HeadRow>
           <div>
-            <SectionTitle>Cart</SectionTitle>
+            <SectionTitle>Giỏ hàng</SectionTitle>
           </div>
-          <RetryButton type="button" onClick={() => void loadCart()} disabled={!isAuthenticated || loading}>Refresh</RetryButton>
+          <RetryButton type="button" onClick={() => void loadCart()} disabled={!isAuthenticated || loading}>Tải lại</RetryButton>
         </HeadRow>
       </Section>
 
@@ -128,13 +128,13 @@ export function CartPage() {
         <CartList aria-label="Cart items">
           {!isAuthenticated && (
             <>
-              <StateText>Please login to manage cart.</StateText>
-              <LoginCta to="/auth/login">Login Required</LoginCta>
+              <StateText>Vui lòng đăng nhập để xem giỏ hàng.</StateText>
+              <LoginCta to="/auth/login">Đăng nhập ngay</LoginCta>
             </>
           )}
-          {loading && <StateText>Loading cart...</StateText>}
-          {!loading && error && <StateText role="alert">Error: {error}</StateText>}
-          {!loading && !error && isAuthenticated && items.length === 0 && <StateText>Cart is empty.</StateText>}
+          {loading && <StateText>Đang tải giỏ hàng...</StateText>}
+          {!loading && error && <StateText role="alert">Lỗi: {error}</StateText>}
+          {!loading && !error && isAuthenticated && items.length === 0 && <StateText>Giỏ hàng trống.</StateText>}
           {!loading && !error && items.map((item, idx) => (
             <CartItem
               key={item.cart_id || item.id || `item-${idx}`}

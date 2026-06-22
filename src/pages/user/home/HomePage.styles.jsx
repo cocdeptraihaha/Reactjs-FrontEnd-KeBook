@@ -304,3 +304,73 @@ export const Search = styled.input`
     box-shadow: 0 0 0 3px rgba(30, 74, 42, 0.08);
   }
 `
+
+export const BannerSliderContainer = styled.div`
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  background: #f4ecdf;
+
+  @media (max-width: 580px) {
+    aspect-ratio: 16 / 9;
+  }
+`
+
+export const BannerSlide = styled(Link)`
+  display: ${(p) => (p.$active ? 'block' : 'none')};
+  width: 100%;
+  height: 100%;
+  text-decoration: none;
+`
+
+export const BannerImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`
+
+export const BannerOverlay = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0));
+  padding: 16px 24px;
+  color: #fff;
+`
+
+export const BannerTitle = styled.h3`
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+`
+
+export const BannerDots = styled.div`
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 2;
+`
+
+export const BannerDot = styled.button`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: ${(p) => (p.$active ? 'var(--brand-700)' : 'rgba(255, 255, 255, 0.5)')};
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.3s ease;
+
+  &:hover {
+    background: ${(p) => (p.$active ? 'var(--brand-700)' : 'rgba(255, 255, 255, 0.8)')};
+  }
+`
+

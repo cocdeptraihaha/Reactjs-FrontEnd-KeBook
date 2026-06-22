@@ -9,19 +9,19 @@ export function OrderSummary({ subtotal, shipping, tax, itemCount = 0, disabled 
 
   return (
     <Card>
-      <H3>Order Summary</H3>
+      <H3>Tổng quan đơn hàng</H3>
       <List>
-        <div><dt>Items</dt><dd>{itemCount}</dd></div>
-        <div><dt>Subtotal</dt><dd>{formatVnd(subtotal)}</dd></div>
-        <div><dt>Shipping</dt><dd>{formatVnd(shipping)}</dd></div>
-        <div><dt>Tax</dt><dd>{formatVnd(tax)}</dd></div>
+        <div><dt>Số lượng</dt><dd>{itemCount}</dd></div>
+        <div><dt>Tạm tính</dt><dd>{formatVnd(subtotal)}</dd></div>
+        <div><dt>Phí vận chuyển</dt><dd>{formatVnd(shipping)}</dd></div>
+        <div><dt>Thuế</dt><dd>{formatVnd(tax)}</dd></div>
       </List>
       <Total>
-        <span>Total</span>
+        <span>Tổng thanh toán</span>
         <strong>{formatVnd(total)}</strong>
       </Total>
       <CTA to={disabled ? '/app/cart' : '/app/checkout'} aria-disabled={disabled}>
-        {disabled ? 'Cart Empty' : 'Proceed Checkout'}
+        {disabled ? 'Giỏ hàng trống' : 'Tiến hành thanh toán'}
       </CTA>
     </Card>
   )

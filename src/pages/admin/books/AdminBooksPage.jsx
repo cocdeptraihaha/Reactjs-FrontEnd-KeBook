@@ -1,9 +1,12 @@
 import { useMemo, useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { booksApi } from '../../../api/books'
 import { uploadApi } from '../../../api/upload'
 import { categoriesApi } from '../../../api/categories'
 import { AdminNavbar } from '../../../components/AdminNavbar'
-import { Alert, P } from '../../WorkflowPages.styles'
+import { AdminBookDiscountsPage } from '../AdminBookDiscountsPage'
+import { P } from '../../WorkflowPages.styles'
 import {
   Container,
   Header,
@@ -14,9 +17,7 @@ import {
   AdminTable,
   Th,
   Td,
-  ActionGroup,
   ActionButton,
-  QuickActions,
   FormGrid,
   FormCard,
   FormCardTitle,
@@ -47,10 +48,13 @@ import {
   CategoryBadge,
   SubCategoryContainer
 } from '../AdminWorkflowPages.styles'
-import { Plus, BookOpen, Trash2, ArrowUp, Upload, Folder, Layers, Edit2 } from 'react-feather'
+import { Plus, BookOpen, Trash2, ArrowUp, Upload, Folder, Layers, Edit2, PlusCircle, Percent } from 'react-feather'
 
 export function AdminAddBookPage() {
-  const [activeSubTab, setActiveSubTab] = useState('book-directory') // 'book-directory', 'book-form', or 'categories-crud'
+  const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
+
+  const [activeSubTab, setActiveSubTab] = useState('book-directory') // 'book-directory', 'book-form', 'categories-crud' or 'banners'
   const [editingBookId, setEditingBookId] = useState(null)
 
   // Book Form State
@@ -75,15 +79,12 @@ export function AdminAddBookPage() {
   })
 
   // Directory List Filter States
-  const [directoryBooks, setDirectoryBooks] = useState([])
   const [dirPage, setDirPage] = useState(1)
-  const [dirTotalPages, setDirTotalPages] = useState(1)
   const [dirSearch, setDirSearch] = useState('')
   const [dirStatus, setDirStatus] = useState('ALL') // 'ALL', 'ACTIVE', 'DELETED'
   const [dirCategory, setDirCategory] = useState('')
   const [dirSort, setDirSort] = useState('id')
   const [dirOrder, setDirOrder] = useState('desc')
-  const [dirLoading, setDirLoading] = useState(false)
 
   // Local Category Checklist & General Category List State
   const [categoriesList, setCategoriesList] = useState([])
@@ -105,6 +106,12 @@ export function AdminAddBookPage() {
   const [categoryForm, setCategoryForm] = useState({ name: '', parent_id: '' })
   const [editingCategoryId, setEditingCategoryId] = useState(null)
 
+  // Banners state (held in localStorage fallback as requested)
+  const [bannersList, setBannersList] = useState([])
+  const [bannerForm, setBannerForm] = useState({ title: '', link_url: '' })
+  const [bannerFile, setBannerFile] = useState(null)
+  const [bannerFileUrl, setBannerFileUrl] = useState('')
+
   // Status indicators
   const [msg, setMsg] = useState('')
   const [error, setError] = useState('')
@@ -121,37 +128,35 @@ export function AdminAddBookPage() {
       const res = await categoriesApi.list()
       setCategoriesList(res)
     } catch (err) {
-      console.error('Failed to load categories', err)
+      console.error('Không thể tải danh mục', err)
     }
   }
 
-  // Load Directory Books List with full admin filtering
-  async function loadDirectoryBooks() {
-    try {
-      setDirLoading(true)
-      const params = {
-        page: dirPage,
-        size: 10,
-        q: dirSearch || undefined,
-        category_id: dirCategory ? Number(dirCategory) : undefined,
-        sort: dirSort,
-        order: dirOrder,
-        include_deleted: true
-      }
-      if (dirStatus === 'ACTIVE') {
-        params.status = 'active'
-      } else if (dirStatus === 'DELETED') {
-        params.status = 'deleted'
-      }
-      const res = await booksApi.adminList(params)
-      setDirectoryBooks(res.data || [])
-      setDirTotalPages(res.page?.pages || 1)
-    } catch (err) {
-      console.error('Failed to load directory books', err)
-    } finally {
-      setDirLoading(false)
-    }
-  }
+  const adminBooksQuery = useQuery({
+    queryKey: ['admin-books-directory', {
+      page: dirPage,
+      q: dirSearch,
+      status: dirStatus,
+      category_id: dirCategory,
+      sort: dirSort,
+      order: dirOrder
+    }],
+    queryFn: () => booksApi.adminList({
+      page: dirPage,
+      size: 10,
+      q: dirSearch.trim() || undefined,
+      category_id: dirCategory ? Number(dirCategory) : undefined,
+      sort: dirSort,
+      order: dirOrder,
+      include_deleted: true,
+      status: dirStatus === 'ACTIVE' ? 'active' : dirStatus === 'DELETED' ? 'deleted' : undefined
+    }),
+    staleTime: 60_000,
+  })
+
+  const directoryBooks = adminBooksQuery.data?.data || []
+  const dirTotalPages = adminBooksQuery.data?.page?.pages || 1
+  const dirLoading = adminBooksQuery.isLoading
 
   // Reset Form attributes back to default
   function resetForm() {
@@ -188,7 +193,7 @@ export function AdminAddBookPage() {
       setLoading(true)
       await booksApi.remove(bookId)
       setMsg('Đã xóa sách thành công!')
-      await loadDirectoryBooks()
+      await queryClient.invalidateQueries({ queryKey: ['admin-books-directory'] })
     } catch (err) {
       setError(err.message || 'Xóa sách thất bại')
     } finally {
@@ -202,7 +207,7 @@ export function AdminAddBookPage() {
       setLoading(true)
       await booksApi.restore(bookId)
       setMsg('Đã khôi phục sách thành công!')
-      await loadDirectoryBooks()
+      await queryClient.invalidateQueries({ queryKey: ['admin-books-directory'] })
     } catch (err) {
       setError(err.message || 'Khôi phục thất bại')
     } finally {
@@ -265,15 +270,75 @@ export function AdminAddBookPage() {
   // Load lists on mounting
   useEffect(() => {
     loadCategories()
-  }, [])
+    const stored = localStorage.getItem('homepage_banners')
+    if (stored) {
+      try {
+        setBannersList(JSON.parse(stored))
+      } catch (err) {
+        console.error(err)
+      }
+    }
 
-  // Auto query directory when parameters change (debounced search input)
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      loadDirectoryBooks()
-    }, 300)
-    return () => clearTimeout(delayDebounceFn)
-  }, [dirPage, dirSearch, dirStatus, dirCategory, dirSort, dirOrder])
+    const tabParam = searchParams.get('tab')
+    if (tabParam) {
+      setActiveSubTab(tabParam)
+    }
+
+    const bookId = searchParams.get('id')
+    if (bookId) {
+      startEditBook({ id: Number(bookId) })
+    }
+  }, [searchParams])
+
+  function saveBanners(newBanners) {
+    setBannersList(newBanners)
+    localStorage.setItem('homepage_banners', JSON.stringify(newBanners))
+  }
+
+  function handleAddBanner(file) {
+    if (!file) {
+      setError('Tệp tin hình ảnh banner là bắt buộc')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setMsg('Đang tải ảnh banner lên hệ thống CDN...')
+
+    const token = localStorage.getItem('access_token')
+    uploadApi.generalImage(file, token)
+      .then((cdnResult) => {
+        if (cdnResult?.url) {
+          const newBanner = {
+            id: `banner-${Date.now()}`,
+            image_url: cdnResult.url,
+            title: bannerForm.title.trim(),
+            link_url: bannerForm.link_url.trim() || '/app/search'
+          }
+          const updated = [...bannersList, newBanner]
+          saveBanners(updated)
+          setBannerForm({ title: '', link_url: '' })
+          setBannerFile(null)
+          setBannerFileUrl('')
+          setMsg('Đã đăng tải và thêm banner quảng cáo mới thành công!')
+        } else {
+          throw new Error('Không lấy được đường dẫn ảnh sau khi tải lên')
+        }
+      })
+      .catch((err) => {
+        setError(err.message || 'Lỗi tải ảnh lên CDN')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }
+
+  function handleDeleteBanner(id) {
+    if (!window.confirm('Bạn có chắc muốn xóa banner quảng cáo này?')) return
+    const updated = bannersList.filter(b => b.id !== id)
+    saveBanners(updated)
+    setMsg('Đã xóa banner thành công!')
+  }
 
   // Build recursive mapping tree helper
   const categoryTree = useMemo(() => {
@@ -325,7 +390,7 @@ export function AdminAddBookPage() {
     }
 
     setLocalImages(prev => [...prev, newLocalImg])
-    setMsg('Image added to draft queue!')
+    setMsg('Đã thêm ảnh vào hàng chờ xuất bản!')
   }
 
   // Handle manual imageUrl entries locally
@@ -388,15 +453,15 @@ export function AdminAddBookPage() {
   // Unified Save Book creation & modification workflow
   async function handleBookPublish() {
     if (!form.title.trim()) {
-      setError('Book Title is required')
+      setError('Tiêu đề sách là bắt buộc')
       return
     }
     if (!form.author.trim()) {
-      setError('Author is required')
+      setError('Tác giả là bắt buộc')
       return
     }
     if (!form.selling_price) {
-      setError('Selling Price is required')
+      setError('Giá bán là bắt buộc')
       return
     }
 
@@ -405,7 +470,7 @@ export function AdminAddBookPage() {
       setError('')
       const isEditing = editingBookId !== null
 
-      setMsg(isEditing ? 'Đang thực hiện giao dịch cập nhật sách...' : 'Starting book registration transaction...')
+      setMsg(isEditing ? 'Đang thực hiện giao dịch cập nhật sách...' : 'Đang khởi tạo đăng ký sách mới...')
 
       // 1. Upload all local files sequentially to Cloudinary CDN
       const token = localStorage.getItem('access_token')
@@ -416,12 +481,12 @@ export function AdminAddBookPage() {
 
         let finalRemoteUrl = item.image_url
         if (item.file) {
-          setMsg(`Uploading product image ${i + 1}/${localImages.length}...`)
+          setMsg(`Đang tải lên ảnh sản phẩm ${i + 1}/${localImages.length}...`)
           const cdnResult = await uploadApi.generalImage(item.file, token)
           if (cdnResult?.url) {
             finalRemoteUrl = cdnResult.url
           } else {
-            throw new Error(`CDN upload failed for image ${i + 1}`)
+            throw new Error(`Tải ảnh thất bại tại ảnh số ${i + 1}`)
           }
         }
 
@@ -507,7 +572,7 @@ export function AdminAddBookPage() {
 
         setMsg(`Thành công! Đã lưu thay đổi cho sách "${form.title}"!`)
       } else {
-        setMsg('Registering book and product details into database...')
+        setMsg('Đang lưu thông tin sách và thông số chi tiết vào cơ sở dữ liệu...')
         const bookCreatePayload = {
           ...bookPayload,
           book_detail: bookDetailPayload
@@ -517,18 +582,18 @@ export function AdminAddBookPage() {
         savedBookId = createdBook?.id || createdBook?.data?.id
 
         if (!savedBookId) {
-          throw new Error('Registration failed, could not obtain Book ID')
+          throw new Error('Đăng ký sách thất bại, không nhận được ID sách')
         }
 
         // Update and bind categories
         if (selectedCategoryIds.length > 0) {
-          setMsg('Associating selected categories with book...')
+          setMsg('Đang liên kết các danh mục đã chọn...')
           await booksApi.categories.update(savedBookId, { category_ids: selectedCategoryIds })
         }
 
         // Create backend book images links
         if (uploadedImages.length > 0) {
-          setMsg('Linking product images to database...')
+          setMsg('Đang liên kết ảnh sản phẩm vào cơ sở dữ liệu...')
           for (const img of uploadedImages) {
             await booksApi.images.create(savedBookId, {
               image_url: img.image_url,
@@ -539,16 +604,16 @@ export function AdminAddBookPage() {
           }
         }
 
-        setMsg(`Success! Book "${form.title}" published successfully with ID #${savedBookId}!`)
+        setMsg(`Thành công! Đã đăng bán sách "${form.title}" với ID #${savedBookId}!`)
       }
 
       // Clear form and reload directory
       resetForm()
       setActiveSubTab('book-directory')
-      await loadDirectoryBooks()
+      await queryClient.invalidateQueries({ queryKey: ['admin-books-directory'] })
     } catch (err) {
       console.error(err)
-      setError(err.message || 'Workflow submission failed')
+      setError(err.message || 'Giao dịch đăng sách thất bại')
     } finally {
       setLoading(false)
     }
@@ -567,16 +632,16 @@ export function AdminAddBookPage() {
       }
       if (editingCategoryId) {
         await categoriesApi.update(editingCategoryId, payload)
-        setMsg('Category updated successfully!')
+        setMsg('Cập nhật danh mục thành công!')
       } else {
         await categoriesApi.create(payload)
-        setMsg('Category created successfully!')
+        setMsg('Tạo danh mục mới thành công!')
       }
       setCategoryForm({ name: '', parent_id: '' })
       setEditingCategoryId(null)
       await loadCategories()
     } catch (err) {
-      setError(err.message || 'Category modification failed')
+      setError(err.message || 'Thao tác danh mục thất bại')
     } finally {
       setLoading(false)
     }
@@ -593,15 +658,15 @@ export function AdminAddBookPage() {
   }
 
   async function handleDeleteCategory(id) {
-    if (!window.confirm('Are you sure you want to delete this category? (Child categories will lose their parent binding)')) return
+    if (!window.confirm('Bạn có chắc muốn xóa danh mục này? (Các danh mục con sẽ mất liên kết cha)')) return
     try {
       setLoading(true)
       setError('')
       await categoriesApi.remove(id)
-      setMsg('Category deleted successfully!')
+      setMsg('Xóa danh mục thành công!')
       await loadCategories()
     } catch (err) {
-      setError(err.message || 'Deletion failed')
+      setError(err.message || 'Xóa danh mục thất bại')
     } finally {
       setLoading(false)
     }
@@ -617,20 +682,20 @@ export function AdminAddBookPage() {
               <CategoryInfo>
                 <Folder size={16} style={{ color: '#8b5cf6' }} />
                 <span>{node.name}</span>
-                {node.parent_id && <CategoryBadge>Sub-category</CategoryBadge>}
+                {node.parent_id && <CategoryBadge>Danh mục con</CategoryBadge>}
               </CategoryInfo>
               <CategoryActions>
                 <ActionButton
                   style={{ padding: '4px 8px', fontSize: '11px', backgroundColor: '#8b5cf6' }}
                   onClick={() => startEditCategory(node)}
                 >
-                  <Edit2 size={12} /> Edit
+                  <Edit2 size={12} /> Sửa
                 </ActionButton>
                 <ActionButton
                   style={{ padding: '4px 8px', fontSize: '11px', backgroundColor: '#ef4444' }}
                   onClick={() => handleDeleteCategory(node.id)}
                 >
-                  <Trash2 size={12} /> Delete
+                  <Trash2 size={12} /> Xóa
                 </ActionButton>
               </CategoryActions>
             </CategoryRow>
@@ -677,7 +742,7 @@ export function AdminAddBookPage() {
       <AdminNavbar />
       <Container>
         <Header>
-          <Title>Book & Category Catalog Hub</Title>
+          <Title>Quản lý Sách & Danh mục</Title>
         </Header>
 
         {/* Tab switch panel */}
@@ -687,21 +752,35 @@ export function AdminAddBookPage() {
             onClick={() => { setActiveSubTab('book-directory'); setMsg(''); setError(''); }}
           >
             <Layers size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-            Book Directory
+            Danh sách sách
           </TabButton>
           <TabButton
             $active={activeSubTab === 'book-form'}
             onClick={() => { setActiveSubTab('book-form'); setMsg(''); setError(''); }}
           >
             <BookOpen size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-            {editingBookId ? 'Modify Book Entry' : 'Book Creator'}
+            {editingBookId ? 'Sửa thông tin sách' : 'Thêm sách mới'}
           </TabButton>
           <TabButton
             $active={activeSubTab === 'categories-crud'}
             onClick={() => { setActiveSubTab('categories-crud'); setMsg(''); setError(''); }}
           >
             <Folder size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-            Category Management
+            Quản lý danh mục
+          </TabButton>
+          <TabButton
+            $active={activeSubTab === 'book-discounts'}
+            onClick={() => { setActiveSubTab('book-discounts'); setMsg(''); setError(''); }}
+          >
+            <Percent size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+            Quản lý giảm giá
+          </TabButton>
+          <TabButton
+            $active={activeSubTab === 'banners'}
+            onClick={() => { setActiveSubTab('banners'); setMsg(''); setError(''); }}
+          >
+            <PlusCircle size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+            Quản lý Banner
           </TabButton>
         </TabHeader>
 
@@ -711,7 +790,7 @@ export function AdminAddBookPage() {
             <FilterBar style={{ marginBottom: '16px', marginTop: '8px' }}>
               <SearchInput
                 type="text"
-                placeholder="Search books by title, author or sku..."
+                placeholder="Tìm sách theo tiêu đề, tác giả hoặc SKU..."
                 value={dirSearch}
                 onChange={(e) => { setDirSearch(e.target.value); setDirPage(1); }}
               />
@@ -730,9 +809,9 @@ export function AdminAddBookPage() {
                 value={dirStatus}
                 onChange={(e) => { setDirStatus(e.target.value); setDirPage(1); }}
               >
-                <option value="ALL">All Listings</option>
-                <option value="ACTIVE">Active Only</option>
-                <option value="DELETED">Deleted Only</option>
+                <option value="ALL">Tất cả trạng thái</option>
+                <option value="ACTIVE">Đang bán</option>
+                <option value="DELETED">Đã xóa tạm</option>
               </select>
 
               <select
@@ -749,7 +828,7 @@ export function AdminAddBookPage() {
                 value={dirCategory}
                 onChange={(e) => { setDirCategory(e.target.value); setDirPage(1); }}
               >
-                <option value="">All Categories</option>
+                <option value="">Tất cả danh mục</option>
                 {categoriesList.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
@@ -769,10 +848,10 @@ export function AdminAddBookPage() {
                 value={dirSort}
                 onChange={(e) => { setDirSort(e.target.value); setDirPage(1); }}
               >
-                <option value="id">Sort: ID</option>
-                <option value="title">Sort: Title</option>
-                <option value="selling_price">Sort: Price</option>
-                <option value="stock_quantity">Sort: Stock</option>
+                <option value="id">Sắp xếp: ID</option>
+                <option value="title">Sắp xếp: Tiêu đề</option>
+                <option value="selling_price">Sắp xếp: Giá bán</option>
+                <option value="stock_quantity">Sắp xếp: Tồn kho</option>
               </select>
 
               <select
@@ -788,8 +867,8 @@ export function AdminAddBookPage() {
                 value={dirOrder}
                 onChange={(e) => { setDirOrder(e.target.value); setDirPage(1); }}
               >
-                <option value="desc">Desc</option>
-                <option value="asc">Asc</option>
+                <option value="desc">Giảm dần</option>
+                <option value="asc">Tăng dần</option>
               </select>
 
               <ActionButton
@@ -797,33 +876,33 @@ export function AdminAddBookPage() {
                 onClick={() => { resetForm(); setActiveSubTab('book-form'); }}
               >
                 <Plus size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-                New Entry
+                Thêm sách mới
               </ActionButton>
             </FilterBar>
 
             {msg && <p style={{ color: '#10b981', fontWeight: 600, fontSize: '13px', margin: '8px 0' }}>{msg}</p>}
             {error && <p style={{ color: '#ef4444', fontWeight: 600, fontSize: '13px', margin: '8px 0' }}>{error}</p>}
 
-            {dirLoading && <P>Loading books directory...</P>}
+            {dirLoading && <P>Đang tải danh sách sách...</P>}
             {!dirLoading && (
               <TableContainer>
                 <AdminTable>
                   <thead>
                     <tr>
                       <Th style={{ width: '80px' }}>ID</Th>
-                      <Th>Book Info</Th>
-                      <Th>Author</Th>
-                      <Th style={{ width: '150px' }}>Selling Price</Th>
-                      <Th style={{ width: '100px' }}>Stock</Th>
-                      <Th style={{ width: '120px' }}>Status</Th>
-                      <Th style={{ width: '220px', textAlign: 'right' }}>Actions</Th>
+                      <Th>Thông tin sách</Th>
+                      <Th>Tác giả</Th>
+                      <Th style={{ width: '150px' }}>Giá bán</Th>
+                      <Th style={{ width: '100px' }}>Tồn kho</Th>
+                      <Th style={{ width: '120px' }}>Trạng thái</Th>
+                      <Th style={{ width: '220px', textAlign: 'right' }}>Thao tác</Th>
                     </tr>
                   </thead>
                   <tbody>
                     {directoryBooks.length === 0 ? (
                       <tr>
                         <Td colSpan={7} style={{ textAlign: 'center', padding: '32px' }}>
-                          No books found in catalogue.
+                          Không tìm thấy sách nào.
                         </Td>
                       </tr>
                     ) : (
@@ -873,7 +952,7 @@ export function AdminAddBookPage() {
                                 backgroundColor: isDeleted ? '#fee2e2' : '#dcfce7',
                                 color: isDeleted ? '#991b1b' : '#166534'
                               }}>
-                                {isDeleted ? 'Deleted' : 'Active'}
+                                {isDeleted ? 'Đã xóa tạm' : 'Đang bán'}
                               </span>
                             </Td>
                             <Td style={{ textAlign: 'right' }}>
@@ -882,21 +961,21 @@ export function AdminAddBookPage() {
                                   style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#3b82f6' }}
                                   onClick={() => startEditBook(book)}
                                 >
-                                  Edit
+                                  Sửa
                                 </ActionButton>
                                 {isDeleted ? (
                                   <ActionButton
                                     style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#10b981' }}
                                     onClick={() => handleRestore(book.id)}
                                   >
-                                    Restore
+                                    Khôi phục
                                   </ActionButton>
                                 ) : (
                                   <ActionButton
                                     style={{ padding: '6px 12px', fontSize: '12px', backgroundColor: '#ef4444' }}
                                     onClick={() => handleSoftDelete(book.id)}
                                   >
-                                    Delete
+                                    Xóa
                                   </ActionButton>
                                 )}
                               </div>
@@ -910,19 +989,19 @@ export function AdminAddBookPage() {
 
                 {dirTotalPages > 1 && (
                   <PaginationContainer>
-                    <PaginationInfo>Page {dirPage} of {dirTotalPages}</PaginationInfo>
+                    <PaginationInfo>Trang {dirPage} / {dirTotalPages}</PaginationInfo>
                     <PaginationControls>
                       <PaginationButton
                         disabled={dirPage === 1}
                         onClick={() => setDirPage(prev => prev - 1)}
                       >
-                        Previous
+                        Trước
                       </PaginationButton>
                       <PaginationButton
                         disabled={dirPage === dirTotalPages}
                         onClick={() => setDirPage(prev => prev + 1)}
                       >
-                        Next
+                        Sau
                       </PaginationButton>
                     </PaginationControls>
                   </PaginationContainer>
@@ -1183,20 +1262,20 @@ export function AdminAddBookPage() {
 
             {/* Right Column - Images local drafter */}
             <FormCard>
-              <FormCardTitle>Staged Local Images ({localImages.length})</FormCardTitle>
+              <FormCardTitle>Đăng ký hình ảnh sản phẩm ({localImages.length})</FormCardTitle>
               <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
-                All selected files and references are held locally. No backend storage is impacted until you press &apos;Publish Book Entry&apos;.
+                Hỗ trợ đăng tải các tệp hình ảnh từ thiết bị của bạn. Chỉ cho phép tệp ảnh thực tế, không chấp nhận nhập liên kết URL để đảm bảo tính khả dụng tối đa.
               </p>
 
-              <FormGroup>
-                <FormLabel>Cover Image Upload</FormLabel>
+              <FormGroup style={{ marginTop: '16px' }}>
+                <FormLabel>Tải ảnh sản phẩm lên *</FormLabel>
                 <label htmlFor="local-image-uploader">
                   <UploadDropzone>
                     <UploadIconWrap>
                       <Upload size={24} />
                     </UploadIconWrap>
-                    <UploadText>Select file to enqueue</UploadText>
-                    <UploadSubtext>PNG, JPG, WEBP locally cached</UploadSubtext>
+                    <UploadText>Chọn tệp từ máy tính để tải lên</UploadText>
+                    <UploadSubtext>Chấp nhận định dạng PNG, JPG, WEBP, v.v.</UploadSubtext>
                     <input
                       type="file"
                       id="local-image-uploader"
@@ -1208,53 +1287,12 @@ export function AdminAddBookPage() {
                 </label>
               </FormGroup>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-                <FormLabel style={{ margin: 0 }}>Or add image link (URL)</FormLabel>
-                <FormInput
-                  placeholder="https://example.com/cover.png"
-                  value={imageInputForm.image_url}
-                  onChange={(e) => setImageInputForm({ ...imageInputForm, image_url: e.target.value })}
-                />
-
-                <FormRow>
-                  <FormGroup>
-                    <FormLabel>Alt Description</FormLabel>
-                    <FormInput
-                      placeholder="e.g. Front Cover"
-                      value={imageInputForm.alt_text}
-                      onChange={(e) => setImageInputForm({ ...imageInputForm, alt_text: e.target.value })}
-                    />
-                  </FormGroup>
-                  <FormGroup>
-                    <FormLabel>Order</FormLabel>
-                    <FormInput
-                      type="number"
-                      value={imageInputForm.sort_order}
-                      onChange={(e) => setImageInputForm({ ...imageInputForm, sort_order: Number(e.target.value) })}
-                    />
-                  </FormGroup>
-                </FormRow>
-
-                <CheckboxWrapper>
-                  <input
-                    type="checkbox"
-                    checked={imageInputForm.is_primary}
-                    onChange={(e) => setImageInputForm({ ...imageInputForm, is_primary: e.target.checked })}
-                  />
-                  Mark as Primary Cover
-                </CheckboxWrapper>
-
-                <ActionButton style={{ width: '100%' }} onClick={handleManualImageUrlAdd}>
-                  Enqueue Image URL
-                </ActionButton>
-              </div>
-
               {/* Local Images List Display */}
               <div style={{ marginTop: '16px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-                <FormLabel>Staged Local Images ({localImages.length})</FormLabel>
+                <FormLabel>Hàng chờ hình ảnh ({localImages.length})</FormLabel>
                 {localImages.length === 0 ? (
                   <p style={{ fontSize: '12px', color: '#94a3b8', margin: '8px 0 0 0', textAlign: 'center' }}>
-                    No media enqueued.
+                    Chưa có tệp ảnh nào được xếp vào hàng chờ.
                   </p>
                 ) : (
                   <ImageGallery>
@@ -1267,19 +1305,19 @@ export function AdminAddBookPage() {
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={() => onDropLocalImage(img.id)}
                       >
-                        {img.is_primary && <ThumbnailBadge>Cover</ThumbnailBadge>}
+                        {img.is_primary && <ThumbnailBadge>Ảnh bìa</ThumbnailBadge>}
                         <GalleryImage src={img.image_url} alt={img.alt_text} />
                         <div style={{ display: 'flex', gap: '4px', width: '100%' }}>
                           <ActionButton
                             style={{ padding: '4px', fontSize: '10px', flex: 1, backgroundColor: '#8b5cf6' }}
-                            title="Set Primary"
+                            title="Đặt làm ảnh bìa chính"
                             onClick={() => setPrimaryLocalImage(img.id)}
                           >
                             <ArrowUp size={12} />
                           </ActionButton>
                           <ActionButton
                             style={{ padding: '4px', fontSize: '10px', backgroundColor: '#ef4444' }}
-                            title="Delete"
+                            title="Gỡ ảnh"
                             onClick={() => removeLocalImage(img.id)}
                           >
                             <Trash2 size={12} />
@@ -1379,6 +1417,129 @@ export function AdminAddBookPage() {
               )}
             </FormCard>
           </FormGrid>
+        )}
+
+        {/* Tab Content 4: Banners Manager (LocalStorage dynamic slider) */}
+        {activeSubTab === 'banners' && (
+          <FormGrid>
+            {/* Left side: Add Banner form */}
+            <FormCard>
+              <FormCardTitle>
+                <PlusCircle size={20} />
+                Thêm Banner mới
+              </FormCardTitle>
+              <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0, fontStyle: 'italic', lineHeight: '1.5' }}>
+                Kích thước khuyên dùng: <strong>1200 x 400 pixels</strong> (tỷ lệ khung hình 3:1) để hiển thị đẹp mắt, tối ưu nhất trên mọi loại màn hình máy tính và thiết bị di động.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <FormGroup>
+                  <FormLabel>Tiêu đề banner (Không bắt buộc)</FormLabel>
+                  <FormInput
+                    placeholder="Ví dụ: Hội Sách Hè 2026"
+                    value={bannerForm.title}
+                    onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })}
+                  />
+                </FormGroup>
+
+                <FormGroup>
+                  <FormLabel>Tải ảnh banner lên *</FormLabel>
+                  <label htmlFor="banner-image-uploader">
+                    <UploadDropzone style={{ minHeight: '110px' }}>
+                      <Upload size={20} />
+                      <UploadText style={{ fontSize: '13px' }}>
+                        {bannerFile ? bannerFile.name : 'Chọn tệp tin ảnh từ thiết bị'}
+                      </UploadText>
+                      <UploadSubtext style={{ fontSize: '11px' }}>Hỗ trợ PNG, JPG, WEBP</UploadSubtext>
+                      <input
+                        type="file"
+                        id="banner-image-uploader"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            setBannerFile(file)
+                            setBannerFileUrl(URL.createObjectURL(file))
+                            setError('')
+                          }
+                        }}
+                      />
+                    </UploadDropzone>
+                  </label>
+                  {bannerFileUrl && (
+                    <img
+                      src={bannerFileUrl}
+                      alt="Banner Preview"
+                      style={{
+                        width: '100%',
+                        height: '110px',
+                        objectFit: 'cover',
+                        borderRadius: '6px',
+                        border: '1px solid #e2e8f0',
+                        marginTop: '8px'
+                      }}
+                    />
+                  )}
+                </FormGroup>
+
+                <FormGroup>
+                  <FormLabel>Liên kết khi nhấn (URL điều hướng)</FormLabel>
+                  <FormInput
+                    placeholder="Ví dụ: /app/search hoặc /app/book/12"
+                    value={bannerForm.link_url}
+                    onChange={(e) => setBannerForm({ ...bannerForm, link_url: e.target.value })}
+                  />
+                </FormGroup>
+
+                {msg && <p style={{ color: '#10b981', fontWeight: 600, fontSize: '13px', margin: 0 }}>{msg}</p>}
+                {error && <p style={{ color: '#ef4444', fontWeight: 600, fontSize: '13px', margin: 0 }}>{error}</p>}
+
+                <FormButton
+                  type="button"
+                  onClick={() => handleAddBanner(bannerFile)}
+                  disabled={loading || !bannerFile}
+                >
+                  Lưu Banner quảng cáo
+                </FormButton>
+              </div>
+            </FormCard>
+
+            {/* Right side: Active Banner lists */}
+            <FormCard>
+              <FormCardTitle>Danh sách Banner hoạt động ({bannersList.length})</FormCardTitle>
+              {bannersList.length === 0 ? (
+                <p style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', padding: '32px' }}>
+                  Chưa có banner quảng cáo nào được lưu. Hãy khởi tạo một banner ở cột bên trái!
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '480px', overflowY: 'auto' }}>
+                  {bannersList.map((banner) => (
+                    <div key={banner.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', border: '1px solid #e2e8f0', padding: '12px', borderRadius: '10px', backgroundColor: '#f8fafc' }}>
+                      <img src={banner.image_url} alt={banner.title || 'Banner'} style={{ width: '100%', height: '110px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '13px', color: '#1e293b' }}>{banner.title || '(Không có tiêu đề)'}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Link: {banner.link_url}</div>
+                        </div>
+                        <ActionButton
+                          style={{ padding: '6px 10px', fontSize: '12px', backgroundColor: '#ef4444' }}
+                          onClick={() => handleDeleteBanner(banner.id)}
+                        >
+                          <Trash2 size={13} style={{ verticalAlign: 'middle' }} /> Xóa
+                        </ActionButton>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </FormCard>
+          </FormGrid>
+        )}
+
+        {/* Tab Content 5: Book Discounts Tab */}
+        {activeSubTab === 'book-discounts' && (
+          <AdminBookDiscountsPage isSubTab={true} />
         )}
       </Container>
     </>

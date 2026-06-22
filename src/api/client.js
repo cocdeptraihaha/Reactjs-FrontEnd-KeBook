@@ -77,7 +77,23 @@ async function request(path, { method = 'GET', body, headers, timeoutMs = DEFAUL
       const payload = safeParseJson(raw)
 
       if (!response.ok) {
-        const detailMessage = payload?.detail || payload?.message
+        let detailMessage = ''
+        if (payload?.detail) {
+          if (Array.isArray(payload.detail)) {
+            detailMessage = payload.detail
+              .map((err) => {
+                const field = Array.isArray(err.loc) ? err.loc.join('.') : ''
+                return `${field ? field + ': ' : ''}${err.msg || 'Invalid value'}`
+              })
+              .join(', ')
+          } else if (typeof payload.detail === 'object') {
+            detailMessage = JSON.stringify(payload.detail)
+          } else {
+            detailMessage = String(payload.detail)
+          }
+        } else {
+          detailMessage = payload?.message || `HTTP ${response.status}`
+        }
 
         // Auto-logout on token expiration (401 Unauthorized)
         if (response.status === 401) {

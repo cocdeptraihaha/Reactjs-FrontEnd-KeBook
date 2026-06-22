@@ -21,6 +21,6 @@ export const usersApi = {
   },
   updateStatus: (userId, isActive) => apiClient.patch(`/users/admin/${userId}/status`, { is_active: isActive }),
   updateRole: (userId, isSuperuser) => apiClient.patch(`/users/admin/${userId}/role`, { is_superuser: isSuperuser }),
-  adjustPoints: (userId, delta, reason) => apiClient.post(`/users/admin/${userId}/points/adjust`, { delta, reason }),
+  adjustPoints: (userId, delta, reason) => apiClient.post(`/users/admin/${userId}/points-adjust`, { delta, reason }),
 }
 

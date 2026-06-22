@@ -20,7 +20,7 @@ export function SupportTicketPage() {
   async function submit(event) {
     event.preventDefault()
     if (!form.issue.trim() || !form.description.trim()) {
-      setError('Issue and description are required')
+      setError('Vui lòng nhập đầy đủ tiêu đề và mô tả chi tiết yêu cầu hỗ trợ.')
       return
     }
 
@@ -37,7 +37,7 @@ export function SupportTicketPage() {
       setCreated(ticket)
       setForm((current) => ({ ...current, issue: '', description: '' }))
     } catch (err) {
-      setError(err.message || 'Failed to submit support ticket')
+      setError(err.message || 'Gửi yêu cầu hỗ trợ thất bại. Vui lòng thử lại.')
     } finally {
       setLoading(false)
     }
@@ -46,17 +46,17 @@ export function SupportTicketPage() {
   return (
     <Wrap>
       <Section>
-        <SectionTitle>Support ticket</SectionTitle>
-        <SectionSub>Send a support request to the KeBook team. Admins receive a notification after submission.</SectionSub>
+        <SectionTitle>Hỗ trợ & Gửi yêu cầu</SectionTitle>
+        <SectionSub>Gửi yêu cầu hỗ trợ đến đội ngũ KeBook. Quản trị viên sẽ nhận được thông báo ngay sau khi bạn gửi.</SectionSub>
 
         <CheckoutGrid>
           <CheckoutPanel>
-            <PanelTitle>Create ticket</PanelTitle>
+            <PanelTitle>Tạo yêu cầu mới</PanelTitle>
             <form onSubmit={submit}>
               <FormStack>
                 <Input
                   type="email"
-                  placeholder="Contact email"
+                  placeholder="Email liên hệ"
                   value={form.email}
                   onChange={(event) => setForm({ ...form, email: event.target.value })}
                 />
@@ -64,43 +64,43 @@ export function SupportTicketPage() {
                   value={form.type}
                   onChange={(event) => setForm({ ...form, type: event.target.value })}
                 >
-                  <option value="ORDER">Order</option>
-                  <option value="PAYMENT">Payment</option>
-                  <option value="DELIVERY">Delivery</option>
-                  <option value="ACCOUNT">Account</option>
-                  <option value="OTHER">Other</option>
+                  <option value="ORDER">Đơn hàng</option>
+                  <option value="PAYMENT">Thanh toán</option>
+                  <option value="DELIVERY">Vận chuyển</option>
+                  <option value="ACCOUNT">Tài khoản</option>
+                  <option value="OTHER">Vấn đề khác</option>
                 </Select>
                 <Input
-                  placeholder="Issue title"
+                  placeholder="Tiêu đề yêu cầu"
                   value={form.issue}
                   onChange={(event) => setForm({ ...form, issue: event.target.value })}
                 />
                 <Textarea
-                  placeholder="Describe your problem clearly"
+                  placeholder="Mô tả chi tiết vấn đề bạn đang gặp phải..."
                   value={form.description}
                   onChange={(event) => setForm({ ...form, description: event.target.value })}
                 />
                 <PrimaryCheckoutButton type="submit" disabled={loading}>
-                  {loading ? 'Submitting...' : 'Submit ticket'}
+                  {loading ? 'Đang gửi...' : 'Gửi yêu cầu'}
                 </PrimaryCheckoutButton>
               </FormStack>
             </form>
             {error && <Alert role="alert">{error}</Alert>}
             {created && (
               <SuccessText>
-                Ticket #{created.id} created. Status: {created.status || 'PENDING'}.
+                Đã gửi yêu cầu #{created.id} thành công! Trạng thái: {created.status === 'PENDING' ? 'Đang chờ xử lý' : created.status}.
               </SuccessText>
             )}
           </CheckoutPanel>
 
           <CheckoutPanel>
-            <PanelTitle>Before sending</PanelTitle>
+            <PanelTitle>Lưu ý trước khi gửi</PanelTitle>
             <List>
-              <li>Include order ID if ticket relates to an order.</li>
-              <li>Use one ticket per issue so support can track status clearly.</li>
-              <li>Responses may arrive through notifications or your contact email.</li>
+              <li>Hãy ghi kèm Mã đơn hàng nếu yêu cầu liên quan đến đơn hàng của bạn.</li>
+              <li>Mỗi yêu cầu chỉ nên đề cập đến 1 vấn đề cụ thể để chúng tôi hỗ trợ nhanh nhất.</li>
+              <li>Phản hồi sẽ được gửi qua trung tâm thông báo hoặc địa chỉ email của bạn.</li>
             </List>
-            <Btn type="button" as={Link} to="/app/notifications">View notifications</Btn>
+            <Btn type="button" as={Link} to="/app/notifications">Xem thông báo</Btn>
           </CheckoutPanel>
         </CheckoutGrid>
       </Section>

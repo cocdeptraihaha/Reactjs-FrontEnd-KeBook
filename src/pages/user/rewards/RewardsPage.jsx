@@ -100,14 +100,19 @@ export function RewardsPage() {
                   </RewardCost>
                   <RewardAction>
                     <PrimaryCheckoutButton type="button" onClick={() => redeem(reward)} disabled={disabled}>
-                      {redeemingId === reward.id ? 'Đang đổi...' : (alreadyRedeemed ? 'Đã đổi' : 'Đổi ngay')}
+                      {redeemingId === reward.id
+                        ? 'Đang đổi...'
+                        : alreadyRedeemed
+                          ? 'Đã đổi'
+                          : insufficient
+                            ? 'Không đủ'
+                            : soldOut
+                              ? 'Hết lượt'
+                              : 'Đổi ngay'}
                     </PrimaryCheckoutButton>
                     <P>
                       {remaining == null ? 'Còn lại: Nhiều' : `Còn lại: ${formatPoint(remaining)} lượt`}
                     </P>
-                    {insufficient && !alreadyRedeemed && <Alert>Không đủ điểm</Alert>}
-                    {soldOut && !alreadyRedeemed && <Alert>Hết lượt</Alert>}
-                    {alreadyRedeemed && <Alert style={{ color: '#27ae60' }}>Đã sở hữu</Alert>}
                   </RewardAction>
                 </RewardCard>
               )

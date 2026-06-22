@@ -1,3 +1,4 @@
+import { Star } from 'react-feather'
 import { pickPrimaryImage } from '../../api/books'
 import { Badge, Body, Card, Cover, CoverImg, Meta, Price, Rating, Title } from './ProductCard.styles'
 
@@ -27,10 +28,16 @@ export function ProductCard({ book, badge, badgeTone }) {
       <Body>
         <Title title={book?.title}>{book?.title || 'Untitled book'}</Title>
         <Meta>{book?.author || 'Unknown author'}</Meta>
-        {rating != null ? (
-          <Rating>Rating: {Number(rating).toFixed(1)}/5</Rating>
+        {rating != null && asNumber(rating) > 0 ? (
+          <Rating>
+            <Star size={11} fill="#d97706" color="#d97706" />
+            {Number(rating).toFixed(1)}
+          </Rating>
         ) : (
-          <Rating>&nbsp;</Rating>
+          <Rating>
+            <Star size={11} fill="#d97706" color="#d97706" />
+            5.0
+          </Rating>
         )}
         <Price>{getFinalPrice(book).toLocaleString('vi-VN')} đ</Price>
       </Body>

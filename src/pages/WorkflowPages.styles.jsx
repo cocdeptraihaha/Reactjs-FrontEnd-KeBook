@@ -46,10 +46,16 @@ export const Textarea = styled.textarea`
 export const Select = styled.select`
   width: 100%;
   min-height: 46px;
-  padding: 11px 13px;
+  padding: 11px 36px 11px 13px;
   border-radius: var(--radius-sm);
   border: 1px solid rgba(185, 170, 150, 0.82);
   background: rgba(255, 250, 240, 0.86);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231f4d2e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='7 15 12 20 17 15'%3E%3C/polyline%3E%3Cpolyline points='7 9 12 4 17 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  cursor: pointer;
 
   &:focus {
     outline: none;
@@ -337,6 +343,15 @@ export const NotiCard = styled.li`
   padding: 12px;
   display: grid;
   gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--brand-700);
+    background: #fdf6e2;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(31, 77, 46, 0.05);
+  }
 `
 export const NotiHead = styled.div`
   display: flex;

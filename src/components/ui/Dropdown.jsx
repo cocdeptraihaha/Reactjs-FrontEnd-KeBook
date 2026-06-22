@@ -13,6 +13,17 @@ const slideDown = keyframes`
   }
 `
 
+const slideUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+`
+
 const DropdownContainer = styled.div`
   position: relative;
   width: 100%;
@@ -68,7 +79,17 @@ const ArrowIconWrap = styled.div`
 
 const DropdownMenu = styled.ul`
   position: absolute;
-  top: calc(100% + 6px);
+  ${props => props.$position === 'top' ? css`
+    bottom: calc(100% + 6px);
+    top: auto;
+    transform-origin: bottom;
+    animation: ${slideUp} 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  ` : css`
+    top: calc(100% + 6px);
+    bottom: auto;
+    transform-origin: top;
+    animation: ${slideDown} 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  `}
   left: 0;
   right: 0;
   background-color: #ffffff;
@@ -79,8 +100,6 @@ const DropdownMenu = styled.ul`
   list-style: none;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   z-index: 200;
-  transform-origin: top;
-  animation: ${slideDown} 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 `
 
 const DropdownItem = styled.li`
@@ -117,6 +136,7 @@ const DropdownItem = styled.li`
 
 export function Dropdown({ value, onChange, options, placeholder = 'Select option', width }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState('bottom')
   const containerRef = useRef(null)
 
   useEffect(() => {
@@ -128,6 +148,21 @@ export function Dropdown({ value, onChange, options, placeholder = 'Select optio
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+      const estimatedHeight = options.length * 40 + 20
+
+      if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
+        setDropdownPosition('top')
+      } else {
+        setDropdownPosition('bottom')
+      }
+    }
+  }, [isOpen, options])
 
   const selectedOption = options.find(opt => opt.value === value)
 
@@ -145,7 +180,7 @@ export function Dropdown({ value, onChange, options, placeholder = 'Select optio
       </DropdownTrigger>
 
       {isOpen && (
-        <DropdownMenu>
+        <DropdownMenu $position={dropdownPosition}>
           {options.map(opt => (
             <DropdownItem
               key={opt.value}

@@ -21,6 +21,7 @@ export const SectionTitle = styled.h2`
   letter-spacing: 0.005em;
   line-height: 1.12;
   font-weight: 800;
+  padding-bottom: 7px;
 
   @media (min-width: 760px) {
     font-size: 1.55rem;
