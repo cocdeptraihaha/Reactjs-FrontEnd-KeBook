@@ -28,7 +28,7 @@ const DropdownContainer = styled.div`
   position: relative;
   width: 100%;
   max-width: ${props => props.$width || '200px'};
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: var(--font-body);
 `
 
 const DropdownTrigger = styled.button`

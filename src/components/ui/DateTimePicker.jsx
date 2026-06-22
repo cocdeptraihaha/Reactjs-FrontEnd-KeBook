@@ -26,7 +26,7 @@ const popInUp = keyframes`
 
 const PickerContainer = styled.div`
   position: relative;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-body);
   display: inline-block;
   width: 100%;
 `
