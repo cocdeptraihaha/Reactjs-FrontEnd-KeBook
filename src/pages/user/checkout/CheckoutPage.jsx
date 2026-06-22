@@ -18,6 +18,7 @@ export function CheckoutPage() {
   const [availablePromos, setAvailablePromos] = useState([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState('COD')
   const [form, setForm] = useState({
     note: '',
   })
@@ -118,11 +119,16 @@ export function CheckoutPage() {
       setError('')
       const payload = {
         address_id: selectedAddress.id,
+        payment_method: paymentMethod,
         ...(form.note.trim() ? { note: form.note.trim() } : {}),
         ...(promotion.trim() ? { promotion_code: promotion.trim() } : {}),
       }
-      await ordersApi.checkout(payload)
-      setSuccess(true)
+      const resp = await ordersApi.checkout(payload)
+      if (resp && resp.payment_url) {
+        window.location.href = resp.payment_url
+      } else {
+        setSuccess(true)
+      }
     } catch (x) {
       setError(x.message || 'Checkout failed')
     }
@@ -132,11 +138,11 @@ export function CheckoutPage() {
     return (
       <Wrap>
         <Section>
-          <SectionTitle>Order Placed Successfully!</SectionTitle>
-          <SectionSub>Thank you for your purchase. We are preparing your order.</SectionSub>
+          <SectionTitle>Đặt hàng thành công!</SectionTitle>
+          <SectionSub>Cảm ơn bạn đã mua sắm tại KeBook. Chúng tôi đang chuẩn bị đơn hàng cho bạn.</SectionSub>
           <Row>
-            <Btn type="button" onClick={() => navigate('/app/orders')}>View My Orders</Btn>
-            <Btn type="button" onClick={() => navigate('/app/home')}>Continue Shopping</Btn>
+            <Btn type="button" onClick={() => navigate('/app/orders')}>Xem Đơn Hàng</Btn>
+            <Btn type="button" onClick={() => navigate('/app/home')}>Tiếp Tục Mua Sắm</Btn>
           </Row>
         </Section>
       </Wrap>
@@ -146,16 +152,16 @@ export function CheckoutPage() {
   return (
     <Wrap>
       <Section>
-        <SectionTitle>Checkout</SectionTitle>
-        <SectionSub>Choose a saved delivery address from your address book, then review promotion and order total.</SectionSub>
+        <SectionTitle>Thanh toán</SectionTitle>
+        <SectionSub>Chọn địa chỉ giao hàng, áp dụng mã giảm giá và xác nhận đơn hàng.</SectionSub>
 
-        {loading && <P>Loading order items...</P>}
+        {loading && <P>Đang tải sản phẩm...</P>}
 
         <CheckoutGrid>
           <CheckoutPanel>
-            <PanelTitle>Delivery address</PanelTitle>
+            <PanelTitle>Địa chỉ giao hàng</PanelTitle>
             {addresses.length === 0 && (
-              <P>No saved address yet. Enter a delivery address manually or add one in Profile.</P>
+              <P>Chưa có địa chỉ giao hàng. Hãy thêm địa chỉ mới trong phần Hồ sơ.</P>
             )}
             {addresses.length > 0 && (
               <AddressChoices>
@@ -172,23 +178,23 @@ export function CheckoutPage() {
                       />
                       <span>
                         <AddressName>
-                          {address.label || 'Home'}
-                          {address.is_default && <Badge>Default</Badge>}
+                          {address.label || 'Nhà riêng'}
+                          {address.is_default && <Badge>Mặc định</Badge>}
                         </AddressName>
-                        <P>{address.recipient_name || 'Recipient'}</P>
-                        <P>{fullAddress || 'No address detail'}</P>
-                        <P>{address.phone_number || 'No phone number'}</P>
+                        <P>{address.recipient_name || 'Người nhận'}</P>
+                        <P>{fullAddress || 'Chưa có chi tiết địa chỉ'}</P>
+                        <P>{address.phone_number || 'Chưa có SĐT'}</P>
                       </span>
                     </AddressChoice>
                   )
                 })}
               </AddressChoices>
             )}
-            <Btn type="button" onClick={() => navigate('/app/profile')}>Manage address book</Btn>
+            <Btn type="button" onClick={() => navigate('/app/profile')}>Quản lý địa chỉ</Btn>
           </CheckoutPanel>
 
           <CheckoutPanel>
-            <PanelTitle>Order summary</PanelTitle>
+            <PanelTitle>Thông tin đơn hàng</PanelTitle>
             {!loading && items.length > 0 && (
               <List>
                 {items.map((item, idx) => (
@@ -199,15 +205,15 @@ export function CheckoutPage() {
                 ))}
               </List>
             )}
-            {!loading && items.length === 0 && <P>Your cart is empty.</P>}
+            {!loading && items.length === 0 && <P>Giỏ hàng trống.</P>}
 
             <Row>
               <Input
-                placeholder="Promotion code"
+                placeholder="Mã giảm giá"
                 value={promotion}
                 onChange={(e) => setPromotion(e.target.value)}
               />
-              <Btn type="button" onClick={validatePromo} disabled={!promotion.trim() || subtotal <= 0}>Apply</Btn>
+              <Btn type="button" onClick={validatePromo} disabled={!promotion.trim() || subtotal <= 0}>Áp dụng</Btn>
             </Row>
 
             {availablePromos.length > 0 && (
@@ -243,7 +249,7 @@ export function CheckoutPage() {
                               const info = await promotionsApi.validate(p.code, subtotal)
                               setPromoInfo(info)
                             } catch (x) {
-                              setError(x.message || 'Invalid promotion')
+                              setError(x.message || 'Mã giảm giá không hợp lệ')
                               setPromoInfo(null)
                             }
                           }
@@ -260,32 +266,61 @@ export function CheckoutPage() {
 
             {promoInfo && (
               <SuccessText>
-                Promotion applied: {promoInfo.name || promoInfo.code} (-{discount.toLocaleString('vi-VN')} đ)
+                Đã áp dụng mã: {promoInfo.name || promoInfo.code} (-{discount.toLocaleString('vi-VN')} đ)
               </SuccessText>
             )}
 
             <SummaryLine>
-              <span>Subtotal</span>
+              <span>Tạm tính</span>
               <span>{subtotal.toLocaleString('vi-VN')} đ</span>
             </SummaryLine>
             {discount > 0 && (
               <DiscountLine>
-                <span>Discount</span>
+                <span>Giảm giá</span>
                 <span>-{discount.toLocaleString('vi-VN')} đ</span>
               </DiscountLine>
             )}
             <TotalLine>
-              <span>Total</span>
+              <span>Tổng thanh toán</span>
               <strong>{total.toLocaleString('vi-VN')} đ</strong>
             </TotalLine>
           </CheckoutPanel>
         </CheckoutGrid>
 
         <StackedCheckoutPanel>
-          <PanelTitle>Delivery note</PanelTitle>
-          <P>Optional note for seller or shipper.</P>
+          <PanelTitle>Phương thức thanh toán</PanelTitle>
+          <P>Chọn hình thức thanh toán thuận tiện nhất cho bạn.</P>
+          <div style={{ display: 'flex', gap: '20px', marginTop: '12px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem' }}>
+              <input
+                type="radio"
+                name="payment-method"
+                value="COD"
+                checked={paymentMethod === 'COD'}
+                onChange={() => setPaymentMethod('COD')}
+                style={{ cursor: 'pointer' }}
+              />
+              Thanh toán khi nhận hàng (COD)
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem' }}>
+              <input
+                type="radio"
+                name="payment-method"
+                value="VNPAY"
+                checked={paymentMethod === 'VNPAY'}
+                onChange={() => setPaymentMethod('VNPAY')}
+                style={{ cursor: 'pointer' }}
+              />
+              Thanh toán online qua VNPAY
+            </label>
+          </div>
+        </StackedCheckoutPanel>
+
+        <StackedCheckoutPanel>
+          <PanelTitle>Ghi chú đơn hàng</PanelTitle>
+          <P>Ghi chú thêm cho người bán hoặc shiper (không bắt buộc).</P>
           <Textarea
-            placeholder="Note for seller"
+            placeholder="Lời nhắn cho cửa hàng..."
             value={form.note}
             onChange={(e) => setForm({ note: e.target.value })}
           />
@@ -299,7 +334,7 @@ export function CheckoutPage() {
           $spaced
           disabled={loading || items.length === 0}
         >
-          Confirm & Place Order
+          Xác Nhận & Đặt Hàng
         </PrimaryCheckoutButton>
       </Section>
     </Wrap>

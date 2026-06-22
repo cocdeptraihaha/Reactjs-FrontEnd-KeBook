@@ -49,3 +49,44 @@ export const ReturnField = styled.label`display:grid;gap:5px;color:var(--text-se
 export const ReturnSelect = styled.select`border:1px solid var(--line);border-radius:var(--radius-sm);min-height:40px;padding:8px 10px;background:#fff;color:var(--text-primary);`
 export const ReturnInput = styled.input`border:1px solid var(--line);border-radius:var(--radius-sm);min-height:40px;padding:8px 10px;background:#fff;color:var(--text-primary);`
 export const ReturnTextarea = styled.textarea`border:1px solid var(--line);border-radius:var(--radius-sm);min-height:74px;padding:9px 10px;background:#fff;color:var(--text-primary);resize:vertical;`
+
+export const PaginationContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-top: 1px solid rgba(30, 74, 42, 0.1);
+  margin-top: 12px;
+`
+export const PaginationInfo = styled.span`
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+`
+export const PaginationControls = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+export const PaginationButton = styled.button`
+  border: 1px solid rgba(30, 74, 42, 0.22);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--brand-900);
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(30, 74, 42, 0.05);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+`
+
