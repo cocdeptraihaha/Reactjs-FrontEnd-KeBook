@@ -129,7 +129,7 @@ export function AdminUsersPage() {
       <AdminNavbar />
       <Container>
         <Header>
-          <Title>Quản Lý Người Dùng</Title>
+          <Title>Người dùng</Title>
           <FilterBar>
             <SearchInputWrapper>
               <Search size={16} />

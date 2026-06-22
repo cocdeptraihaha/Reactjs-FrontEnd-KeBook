@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { AdminNavbar } from '../../components/AdminNavbar'
 import { DateTimePicker } from '../../components/ui/DateTimePicker'
 import { promotionsApi } from '../../api/promotions'
+import { usersApi } from '../../api/users'
 import { Plus, Trash2, Edit2, BarChart2, Search, Gift } from 'react-feather'
 import {
   Container,
@@ -27,11 +28,114 @@ import {
   FormRow,
   FormLabel,
   FormInput,
-  FormSelect
+  FormSelect,
+  SearchableSelectContainer,
+  SearchableSelectInputWrapper,
+  SearchableSelectDropdown,
+  SearchableSelectItem,
+  SearchableSelectNoResults,
+  SearchableSelectUserText,
+  SearchableSelectUserSubtext
 } from './AdminPromotionsPage.styles'
+
+function SearchableUserSelect({ users, value, onChange, placeholder = 'Tìm kiếm người dùng...' }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const selectedUser = users.find(u => String(u.id) === String(value))
+
+  const filteredUsers = users.filter(u => {
+    const q = search.toLowerCase()
+    return (
+      String(u.id).includes(q) ||
+      (u.full_name || '').toLowerCase().includes(q) ||
+      (u.username || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q)
+    )
+  })
+
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setIsOpen(false)
+    }
+    document.addEventListener('click', handleOutsideClick)
+    return () => document.removeEventListener('click', handleOutsideClick)
+  }, [])
+
+  return (
+    <SearchableSelectContainer onClick={(e) => e.stopPropagation()}>
+      <SearchableSelectInputWrapper>
+        <FormInput
+          type="text"
+          placeholder={selectedUser ? `${selectedUser.full_name || selectedUser.username} (@${selectedUser.username})` : placeholder}
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setIsOpen(true)
+          }}
+          onFocus={() => setIsOpen(true)}
+          style={{ width: '100%', paddingRight: value ? '50px' : '12px' }}
+        />
+        {value && (
+          <button
+            type="button"
+            style={{
+              position: 'absolute',
+              right: '12px',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              color: '#dc2626',
+              fontSize: '12px',
+              fontWeight: '700'
+            }}
+            onClick={() => {
+              onChange('')
+              setSearch('')
+            }}
+          >
+            Xóa
+          </button>
+        )}
+      </SearchableSelectInputWrapper>
+
+      {isOpen && (
+        <SearchableSelectDropdown>
+          {filteredUsers.length === 0 ? (
+            <SearchableSelectNoResults>Không tìm thấy người dùng</SearchableSelectNoResults>
+          ) : (
+            filteredUsers.map((u) => {
+              const selected = String(u.id) === String(value)
+              return (
+                <SearchableSelectItem
+                  key={u.id}
+                  $selected={selected}
+                  onClick={() => {
+                    onChange(String(u.id))
+                    setSearch('')
+                    setIsOpen(false)
+                  }}
+                >
+                  <SearchableSelectUserText>
+                    {u.full_name || u.username} {selected && '✓'}
+                  </SearchableSelectUserText>
+                  <SearchableSelectUserSubtext>
+                    @{u.username} • {u.email || 'Không có email'} (ID: #{u.id})
+                  </SearchableSelectUserSubtext>
+                </SearchableSelectItem>
+              )
+            })
+          )}
+        </SearchableSelectDropdown>
+      )}
+    </SearchableSelectContainer>
+  )
+}
+
 
 export function AdminPromotionsPage() {
   const [promotions, setPromotions] = useState([])
+  const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
@@ -46,6 +150,9 @@ export function AdminPromotionsPage() {
   const [form, setForm] = useState({
     code: '',
     name: '',
+    promotion_type: 'GLOBAL',
+    owner_user_id: '',
+    cost_points: '',
     discount_percent: '',
     discount_amount: '',
     free_shipping: false,
@@ -65,8 +172,12 @@ export function AdminPromotionsPage() {
     try {
       setLoading(true)
       setError(null)
-      const data = await promotionsApi.list()
+      const [data, usersData] = await Promise.all([
+        promotionsApi.list(),
+        usersApi.listAll({ limit: 200 }).catch(() => [])
+      ])
       setPromotions(data || [])
+      setUsers(usersData || [])
     } catch (err) {
       setError(err.message || 'Lỗi khi tải danh sách khuyến mãi.')
     } finally {
@@ -82,6 +193,9 @@ export function AdminPromotionsPage() {
     setForm({
       code: '',
       name: '',
+      promotion_type: 'GLOBAL',
+      owner_user_id: '',
+      cost_points: '',
       discount_percent: '',
       discount_amount: '',
       free_shipping: false,
@@ -100,6 +214,9 @@ export function AdminPromotionsPage() {
     setForm({
       code: promo.code || '',
       name: promo.name || '',
+      promotion_type: promo.promotion_type || 'GLOBAL',
+      owner_user_id: promo.owner_user_id !== null && promo.owner_user_id !== undefined ? String(promo.owner_user_id) : '',
+      cost_points: promo.cost_points !== null && promo.cost_points !== undefined ? String(promo.cost_points) : '',
       discount_percent: promo.discount_percent !== null && promo.discount_percent !== undefined ? String(promo.discount_percent) : '',
       discount_amount: promo.discount_amount !== null && promo.discount_amount !== undefined ? String(promo.discount_amount) : '',
       free_shipping: Boolean(promo.free_shipping),
@@ -149,6 +266,9 @@ export function AdminPromotionsPage() {
       const payload = {
         code: form.code.trim().toUpperCase(),
         name: form.name.trim(),
+        promotion_type: form.promotion_type,
+        owner_user_id: form.promotion_type === 'PERSONAL' ? Number(form.owner_user_id || 0) : null,
+        cost_points: form.promotion_type === 'POINT_EXCHANGE' ? Number(form.cost_points || 0) : null,
         free_shipping: form.free_shipping,
         discount_percent: form.discount_percent ? Number(form.discount_percent) : null,
         discount_amount: form.discount_amount ? Number(form.discount_amount) : null,
@@ -278,8 +398,10 @@ export function AdminPromotionsPage() {
                       </div>
                     </Td>
                     <Td>
-                      {promo.owner_user_id ? (
-                        <Badge $type="personal">Cá nhân (User #{promo.owner_user_id})</Badge>
+                      {promo.promotion_type === 'PERSONAL' || promo.owner_user_id ? (
+                        <Badge $type="personal">Cá nhân {promo.owner_user_id ? `(User #${promo.owner_user_id})` : ''}</Badge>
+                      ) : promo.promotion_type === 'POINT_EXCHANGE' ? (
+                        <Badge $type="personal" style={{ backgroundColor: '#fffbeb', color: '#d97706' }}>Đổi điểm ({promo.cost_points || 0}đ)</Badge>
                       ) : expired ? (
                         <Badge $type="expired">Hết hạn</Badge>
                       ) : (
@@ -318,6 +440,42 @@ export function AdminPromotionsPage() {
               <form onSubmit={handleSubmit}>
                 <ModalHeader>{activeModal === 'create' ? 'Tạo Khuyến Mãi Mới' : 'Sửa Khuyến Mãi'}</ModalHeader>
                 <ModalBody>
+                  <FormRow style={{ overflow: 'visible' }}>
+                    <FormGroup style={{ overflow: 'visible' }}>
+                      <FormLabel>Loại khuyến mãi:</FormLabel>
+                      <FormSelect
+                        value={form.promotion_type}
+                        onChange={(e) => setForm({ ...form, promotion_type: e.target.value })}
+                      >
+                        <option value="GLOBAL">Toàn sàn</option>
+                        <option value="PERSONAL">Cá nhân</option>
+                        <option value="POINT_EXCHANGE">Đổi điểm</option>
+                      </FormSelect>
+                    </FormGroup>
+                    {form.promotion_type === 'POINT_EXCHANGE' && (
+                      <FormGroup>
+                        <FormLabel>Số điểm cần đổi:</FormLabel>
+                        <FormInput
+                          type="number"
+                          placeholder="Ví dụ: 100"
+                          value={form.cost_points}
+                          onChange={(e) => setForm({ ...form, cost_points: e.target.value })}
+                          required
+                        />
+                      </FormGroup>
+                    )}
+                    {form.promotion_type === 'PERSONAL' && (
+                      <FormGroup style={{ overflow: 'visible' }}>
+                        <FormLabel>Chọn người nhận:</FormLabel>
+                        <SearchableUserSelect
+                          users={users}
+                          value={form.owner_user_id}
+                          onChange={(val) => setForm({ ...form, owner_user_id: val })}
+                        />
+                      </FormGroup>
+                    )}
+                  </FormRow>
+
                   <FormRow>
                     <FormGroup>
                       <FormLabel>Mã code (Viết liền, không dấu):</FormLabel>
@@ -490,14 +648,12 @@ export function AdminPromotionsPage() {
                   <p style={{ marginBottom: '16px', fontSize: '13px', color: '#64748b' }}>
                     Hệ thống sẽ nhân bản Voucher mẫu này thành Voucher cá nhân (chỉ User đó có quyền sử dụng).
                   </p>
-                  <FormGroup>
-                    <FormLabel>Nhập ID người dùng (User ID):</FormLabel>
-                    <FormInput
-                      type="number"
-                      required
-                      placeholder="Ví dụ: 12"
+                  <FormGroup style={{ overflow: 'visible' }}>
+                    <FormLabel>Tìm và chọn người dùng:</FormLabel>
+                    <SearchableUserSelect
+                      users={users}
                       value={issueForm.user_id}
-                      onChange={(e) => setIssueForm({ user_id: e.target.value })}
+                      onChange={(val) => setIssueForm({ user_id: val })}
                     />
                   </FormGroup>
                 </ModalBody>

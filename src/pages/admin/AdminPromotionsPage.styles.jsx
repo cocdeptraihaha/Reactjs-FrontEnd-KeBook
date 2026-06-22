@@ -351,3 +351,66 @@ export const FormSelect = styled.select`
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   }
 `
+
+export const SearchableSelectContainer = styled.div`
+  position: relative;
+  width: 100%;
+`
+
+export const SearchableSelectInputWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+`
+
+export const SearchableSelectDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1010;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+`
+
+export const SearchableSelectItem = styled.div`
+  padding: 10px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-bottom: 1px solid #f1f5f9;
+  background-color: ${props => props.$selected ? '#f1f5f9' : 'transparent'};
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: #f1f5f9;
+  }
+`
+
+export const SearchableSelectNoResults = styled.div`
+  padding: 12px;
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+`
+
+export const SearchableSelectUserText = styled.span`
+  font-weight: 600;
+  color: #1e293b;
+`
+
+export const SearchableSelectUserSubtext = styled.span`
+  font-size: 11px;
+  color: #64748b;
+`
+

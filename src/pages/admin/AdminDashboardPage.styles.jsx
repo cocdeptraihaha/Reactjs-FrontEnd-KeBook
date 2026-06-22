@@ -748,6 +748,65 @@ export const LegendColor = styled.div`
   background-color: ${props => props.$color || '#cbd5e1'};
 `
 
+/* Low stock alert and tables */
+export const AlertBanner = styled.div`
+  background-color: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+`
+
+export const AlertHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e11d48;
+  font-weight: 700;
+  font-size: 15px;
+`
+
+export const AlertList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #fda4af;
+    border-radius: 4px;
+  }
+`
+
+export const AlertItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #4c0519;
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ffe4e6;
+`
+
+export const AlertBadge = styled.span`
+  background-color: #ffe4e6;
+  color: #be123c;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 11px;
+`
+
 export const LegendTextWrap = styled.div`
   display: flex;
   align-items: center;
