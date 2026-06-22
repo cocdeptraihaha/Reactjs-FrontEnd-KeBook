@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import styled from 'styled-components'
+import { AlertTriangle, X } from 'react-feather'
 import { booksApi, pickPrimaryImage } from '../../../api/books'
 import { cartApi } from '../../../api/cart'
 import { reviewsApi } from '../../../api/reviews'
@@ -96,6 +98,7 @@ export function BookDetailPage() {
   const [error, setError] = useState('')
   const [actionError, setActionError] = useState('')
   const [selectedImage, setSelectedImage] = useState('')
+  const [showAuthModal, setShowAuthModal] = useState(false)
   const similarViewportRef = useRef(null)
 
   const load = useCallback(async () => {
@@ -154,7 +157,7 @@ export function BookDetailPage() {
 
   async function handleAddToCart() {
     if (!isAuthenticated) {
-      navigate('/auth/login', { state: { from: `/app/book/${id}` } })
+      setShowAuthModal(true)
       return
     }
 
@@ -241,7 +244,7 @@ export function BookDetailPage() {
               {actionError && <StateText role="alert">Lỗi: {actionError}</StateText>}
               <Actions>
                 <PrimaryBtn type="button" onClick={handleAddToCart} disabled={!inStock}>
-                  {isAuthenticated ? (inStock ? 'Thêm vào giỏ hàng' : 'Hết hàng') : 'Đăng nhập để mua'}
+                  {inStock ? 'Thêm vào giỏ hàng' : 'Hết hàng'}
                 </PrimaryBtn>
               </Actions>
             </>
@@ -382,6 +385,159 @@ export function BookDetailPage() {
           </>
         )}
       </ListCard>
+
+      {showAuthModal && (
+        <AuthModalOverlay onClick={() => setShowAuthModal(false)}>
+          <AuthModalCard onClick={(e) => e.stopPropagation()}>
+            <AuthModalClose onClick={() => setShowAuthModal(false)}>
+              <X size={18} />
+            </AuthModalClose>
+            <AuthModalIconWrap>
+              <AlertTriangle size={36} color="#b4782f" />
+            </AuthModalIconWrap>
+            <AuthModalTitle>Yêu cầu tài khoản</AuthModalTitle>
+            <AuthModalText>
+              Vui lòng tạo tài khoản mới hoặc đăng nhập vào hệ thống để mua hàng và trải nghiệm các tính năng đầy đủ của KeBook.
+            </AuthModalText>
+            <AuthModalActions>
+              <AuthModalBtn className="primary" onClick={() => navigate('/auth/register', { state: { from: `/app/book/${id}` } })}>
+                Đăng ký ngay
+              </AuthModalBtn>
+              <AuthModalBtn className="secondary" onClick={() => navigate('/auth/login', { state: { from: `/app/book/${id}` } })}>
+                Đăng nhập
+              </AuthModalBtn>
+            </AuthModalActions>
+          </AuthModalCard>
+        </AuthModalOverlay>
+      )}
     </Wrap>
   )
 }
+
+// Styled Components for Auth Requirement Modal
+const AuthModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(22, 17, 15, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+`
+
+const AuthModalCard = styled.div`
+  background-color: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(185, 170, 150, 0.3);
+  padding: 32px 24px;
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  font-family: var(--font-body);
+  animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes modalPopIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+`
+
+const AuthModalClose = styled.button`
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: #f1f5f9;
+    color: var(--text-primary);
+  }
+`
+
+const AuthModalIconWrap = styled.div`
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: rgba(180, 120, 47, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+`
+
+const AuthModalTitle = styled.h3`
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+`
+
+const AuthModalText = styled.p`
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 24px;
+`
+
+const AuthModalActions = styled.div`
+  display: flex;
+  gap: 12px;
+  width: 100%;
+`
+
+const AuthModalBtn = styled.button`
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-pill);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+
+  &.primary {
+    background: linear-gradient(140deg, var(--brand-950), var(--brand-700));
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(31, 77, 46, 0.15);
+
+    &:hover {
+      opacity: 0.95;
+    }
+  }
+
+  &.secondary {
+    background-color: #f1f5f9;
+    color: var(--text-secondary);
+    border: 1px solid #cbd5e1;
+
+    &:hover {
+      background-color: #e2e8f0;
+      color: var(--text-primary);
+    }
+  }
+`

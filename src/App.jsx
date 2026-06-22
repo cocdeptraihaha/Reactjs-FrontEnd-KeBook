@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, Outlet } from 'react-router-dom'
 import { RequireAuth } from './auth/RequireAuth'
 import { RequireRole } from './auth/RequireRole'
 import { AppLayout } from './components/AppLayout'
@@ -49,82 +49,103 @@ function App() {
 
       <Route
         path="/app"
-        element={(
-          <RequireAuth>
-            <AppLayout />
-          </RequireAuth>
-        )}
+        element={<AppLayout />}
       >
         <Route index element={<Navigate to="/app/home" replace />} />
         <Route path="home" element={<HomePage />} />
         <Route path="search" element={<SearchPage />} />
         <Route path="book/:id" element={<BookDetailPage />} />
-        <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="cart" element={<CartPage />} />
-        <Route path="checkout" element={<CheckoutPage />} />
-        <Route path="orders" element={<OrderHistoryPage />} />
-        <Route path="orders/:id" element={<OrderDetailPage />} />
-        <Route path="profile" element={<ProfilePage />} />
-        <Route path="profile/account" element={<AccountSettingsPage />} />
-        <Route path="profile/favorites" element={<FavoritesPage />} />
-        <Route path="profile/my-vouchers" element={<MyVouchersPage />} />
-        <Route path="profile/rewards" element={<RewardsPage />} />
-        <Route path="profile/support" element={<SupportTicketPage />} />
-        <Route path="profile/write-review" element={<WriteReviewPage />} />
+
+        {/* Private User Routes */}
+        <Route
+          element={(
+            <RequireAuth>
+              <Outlet />
+            </RequireAuth>
+          )}
+        >
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="cart" element={<CartPage />} />
+          <Route path="checkout" element={<CheckoutPage />} />
+          <Route path="orders" element={<OrderHistoryPage />} />
+          <Route path="orders/:id" element={<OrderDetailPage />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="profile/account" element={<AccountSettingsPage />} />
+          <Route path="profile/favorites" element={<FavoritesPage />} />
+          <Route path="profile/my-vouchers" element={<MyVouchersPage />} />
+          <Route path="profile/rewards" element={<RewardsPage />} />
+          <Route path="profile/support" element={<SupportTicketPage />} />
+          <Route path="profile/write-review" element={<WriteReviewPage />} />
+        </Route>
+
         <Route
           path="admin/orders"
           element={(
-            <RequireRole role="ADMIN">
-              <AdminOrdersPage />
-            </RequireRole>
+            <RequireAuth>
+              <RequireRole role="ADMIN">
+                <AdminOrdersPage />
+              </RequireRole>
+            </RequireAuth>
           )}
         />
         <Route
           path="admin/dashboard"
           element={(
-            <RequireRole role="ADMIN">
-              <AdminDashboardPage />
-            </RequireRole>
+            <RequireAuth>
+              <RequireRole role="ADMIN">
+                <AdminDashboardPage />
+              </RequireRole>
+            </RequireAuth>
           )}
         />
         <Route
           path="admin/books/new"
           element={(
-            <RequireRole role="ADMIN">
-              <AdminAddBookPage />
-            </RequireRole>
+            <RequireAuth>
+              <RequireRole role="ADMIN">
+                <AdminAddBookPage />
+              </RequireRole>
+            </RequireAuth>
           )}
         />
         <Route
           path="admin/users"
           element={(
-            <RequireRole role="ADMIN">
-              <AdminUsersPage />
-            </RequireRole>
+            <RequireAuth>
+              <RequireRole role="ADMIN">
+                <AdminUsersPage />
+              </RequireRole>
+            </RequireAuth>
           )}
         />
         <Route
           path="admin/notifications"
           element={(
-            <RequireRole role="ADMIN">
-              <AdminNotificationsPage />
-            </RequireRole>
+            <RequireAuth>
+              <RequireRole role="ADMIN">
+                <AdminNotificationsPage />
+              </RequireRole>
+            </RequireAuth>
           )}
         />
         <Route
           path="admin/promotions"
           element={(
-            <RequireRole role="ADMIN">
-              <AdminPromotionsPage />
-            </RequireRole>
+            <RequireAuth>
+              <RequireRole role="ADMIN">
+                <AdminPromotionsPage />
+              </RequireRole>
+            </RequireAuth>
           )}
         />
         <Route
           path="admin/book-discounts"
           element={(
-            <RequireRole role="ADMIN">
-              <Navigate to="/app/admin/books/new?tab=book-discounts" replace />
-            </RequireRole>
+            <RequireAuth>
+              <RequireRole role="ADMIN">
+                <Navigate to="/app/admin/books/new?tab=book-discounts" replace />
+              </RequireRole>
+            </RequireAuth>
           )}
         />
       </Route>
