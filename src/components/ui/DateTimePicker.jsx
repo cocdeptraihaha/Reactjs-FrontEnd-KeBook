@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import styled, { keyframes, css } from 'styled-components'
 import { Calendar, Clock, ChevronDown, ChevronLeft, ChevronRight } from 'react-feather'
 
@@ -29,6 +30,9 @@ const PickerContainer = styled.div`
   font-family: var(--font-body);
   display: inline-block;
   width: 100%;
+  --picker-brand: ${props => props.$brandColor || 'var(--brand-900)'};
+  --picker-brand-hover: ${props => props.$brandColorHover || 'var(--brand-800)'};
+  --picker-brand-border: ${props => props.$brandColorBorder || 'var(--brand-500)'};
 `
 
 const TriggerButton = styled.button`
@@ -84,32 +88,25 @@ const ArrowWrap = styled.div`
 
   ${props => props.$isOpen && css`
     transform: rotate(180deg);
-    color: var(--brand-900);
+    color: var(--picker-brand);
   `}
 `
 
 const PopoverCard = styled.div`
-  position: absolute;
-  ${props => props.$position === 'top' ? css`
-    bottom: calc(100% + 6px);
-    top: auto;
-    animation: ${popInUp} 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  ` : css`
-    top: calc(100% + 6px);
-    bottom: auto;
-    animation: ${popIn} 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  `}
-  left: 0;
+  position: fixed;
+  ${props => props.$top !== undefined ? css`top: ${props.$top}px;` : ''}
+  ${props => props.$left !== undefined ? css`left: ${props.$left}px;` : ''}
   background-color: #ffffff;
   border: 1px solid rgba(185, 170, 150, 0.3);
   border-radius: 16px;
   padding: 16px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  z-index: 500;
+  z-index: 9999;
   width: 320px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  animation: ${props => props.$position === 'top' ? popInUp : popIn} 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 `
 
 const QuickTabs = styled.div`
@@ -126,8 +123,8 @@ const TabBtn = styled.button`
   padding: 6px;
   font-size: 12px;
   font-weight: 700;
-  color: ${props => props.$active ? 'var(--brand-900)' : '#64748b'};
-  border-bottom: 2px solid ${props => props.$active ? 'var(--brand-900)' : 'transparent'};
+  color: ${props => props.$active ? 'var(--picker-brand)' : '#64748b'};
+  border-bottom: 2px solid ${props => props.$active ? 'var(--picker-brand)' : 'transparent'};
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -136,7 +133,7 @@ const TabBtn = styled.button`
   transition: all 0.15s ease;
 
   &:hover {
-    color: var(--brand-800);
+    color: var(--picker-brand-hover);
   }
 `
 
@@ -238,13 +235,13 @@ const DayCell = styled.button`
   }
 
   ${props => props.$isToday && css`
-    border: 1px solid var(--brand-500);
-    color: var(--brand-900);
+    border: 1px solid var(--picker-brand-border);
+    color: var(--picker-brand);
     font-weight: 800;
   `}
 
   ${props => props.$isSelected && css`
-    background-color: var(--brand-900) !important;
+    background-color: var(--picker-brand) !important;
     color: #ffffff !important;
     font-weight: 800;
   `}
@@ -289,7 +286,7 @@ const StyledTimeInput = styled.input`
   background-color: #ffffff;
 
   &:focus {
-    border-color: var(--brand-900);
+    border-color: var(--picker-brand);
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1);
   }
 `
@@ -325,10 +322,10 @@ const ActionBtn = styled.button`
   }
 
   &.primary {
-    background-color: var(--brand-900);
+    background-color: var(--picker-brand);
     color: #ffffff;
     &:hover {
-      background-color: var(--brand-800);
+      background-color: var(--picker-brand-hover);
     }
   }
 `
@@ -344,9 +341,20 @@ function parseLocalDate(value) {
   return parsed
 }
 
-export function DateTimePicker({ value, onChange, label = 'Select Date', type = 'date', maxDate }) {
+export function DateTimePicker({
+  value,
+  onChange,
+  label = 'Select Date',
+  type = 'date',
+  maxDate,
+  brandColor,
+  brandColorHover,
+  brandColorBorder
+}) {
   const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef(null)
   const popoverRef = useRef(null)
+  const [coords, setCoords] = useState({ top: 0, left: 0 })
 
   const maxDateParsed = useMemo(() => {
     if (!maxDate) return null
@@ -397,7 +405,10 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (popoverRef.current && !popoverRef.current.contains(event.target)) {
+      if (
+        containerRef.current && !containerRef.current.contains(event.target) &&
+        popoverRef.current && !popoverRef.current.contains(event.target)
+      ) {
         setIsOpen(false)
       }
     }
@@ -405,18 +416,40 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  useEffect(() => {
-    if (isOpen && popoverRef.current) {
-      const rect = popoverRef.current.getBoundingClientRect()
+  const updateCoordinates = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
       const spaceBelow = window.innerHeight - rect.bottom
       const spaceAbove = rect.top
-      const estimatedHeight = 420 // Estimated height of PopoverCard
+      const estimatedHeight = 380 // Estimated height of PopoverCard
 
+      let position = 'bottom'
+      let top = rect.bottom + 6
       if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
-        setDropdownPosition('top')
-      } else {
-        setDropdownPosition('bottom')
+        position = 'top'
+        top = rect.top - estimatedHeight - 6
       }
+
+      // Ensure left alignment has boundary protection
+      let left = rect.left
+      if (left + 320 > window.innerWidth) {
+        left = Math.max(10, window.innerWidth - 340)
+      }
+
+      setDropdownPosition(position)
+      setCoords({ top, left })
+    }
+  }
+
+  useEffect(() => {
+    if (isOpen) {
+      updateCoordinates()
+      window.addEventListener('resize', updateCoordinates)
+      window.addEventListener('scroll', updateCoordinates, true)
+    }
+    return () => {
+      window.removeEventListener('resize', updateCoordinates)
+      window.removeEventListener('scroll', updateCoordinates, true)
     }
   }, [isOpen])
 
@@ -544,13 +577,18 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
   const activeYear = dateObj.getFullYear()
 
   return (
-    <PickerContainer ref={popoverRef}>
+    <PickerContainer
+      ref={containerRef}
+      $brandColor={brandColor}
+      $brandColorHover={brandColorHover}
+      $brandColorBorder={brandColorBorder}
+    >
       <TriggerButton type="button" onClick={() => setIsOpen(!isOpen)} $isOpen={isOpen}>
         <ValueArea>
           {type === 'date' ? (
-            <Calendar size={15} style={{ color: 'var(--brand-900)' }} />
+            <Calendar size={15} style={{ color: 'var(--picker-brand)' }} />
           ) : (
-            <Clock size={15} style={{ color: 'var(--brand-900)' }} />
+            <Clock size={15} style={{ color: 'var(--picker-brand)' }} />
           )}
           <span>{label ? `${label}: ` : ''}{formattedDateDisplay}</span>
         </ValueArea>
@@ -559,8 +597,13 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
         </ArrowWrap>
       </TriggerButton>
 
-      {isOpen && (
-        <PopoverCard $position={dropdownPosition}>
+      {isOpen && createPortal(
+        <PopoverCard
+          ref={popoverRef}
+          $position={dropdownPosition}
+          $top={coords.top}
+          $left={coords.left}
+        >
           {type === 'datetime-local' && (
             <QuickTabs>
               <TabBtn type="button" $active={viewTab === 'date'} onClick={() => setViewTab('date')}>
@@ -708,7 +751,8 @@ export function DateTimePicker({ value, onChange, label = 'Select Date', type = 
               </ActionBtn>
             </FooterSection>
           )}
-        </PopoverCard>
+        </PopoverCard>,
+        document.body
       )}
     </PickerContainer>
   )
