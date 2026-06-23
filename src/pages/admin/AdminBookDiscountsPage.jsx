@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { AdminNavbar } from '../../components/AdminNavbar'
 import { bookDiscountsApi } from '../../api/bookDiscounts'
 import { booksApi, pickPrimaryImage } from '../../api/books'
+import { DateTimePicker } from '../../components/ui/DateTimePicker'
 import { Plus, Trash2, Edit2, Search, Percent } from 'react-feather'
 import {
   Container,
@@ -62,7 +63,7 @@ export function AdminBookDiscountsPage({ isSubTab = false }) {
       setError(null)
       const [discountData, booksRes] = await Promise.all([
         bookDiscountsApi.list(),
-        booksApi.adminList({ limit: 300 }).catch(() => ({ data: [] }))
+        booksApi.adminList({ size: 1000 }).catch(() => ({ data: [] }))
       ])
       setDiscounts(discountData || [])
       setBooks(booksRes?.data || [])
@@ -241,7 +242,6 @@ export function AdminBookDiscountsPage({ isSubTab = false }) {
                 return (
                   <tr key={discount.id}>
                     <Td style={{ fontWeight: '800', color: '#dc2626', fontSize: '15px' }}>
-                      <Percent size={14} style={{ marginRight: '2px', verticalAlign: 'middle' }} />
                       {discount.discount_percent}%
                     </Td>
                     <Td style={{ maxWidth: '400px' }}>
@@ -333,21 +333,29 @@ export function AdminBookDiscountsPage({ isSubTab = false }) {
                   </FormGroup>
                 </FormRow>
 
-                <FormRow>
-                  <FormGroup>
+                <FormRow style={{ overflow: 'visible' }}>
+                  <FormGroup style={{ overflow: 'visible' }}>
                     <FormLabel>Thời gian bắt đầu</FormLabel>
-                    <FormInput
+                    <DateTimePicker
+                      label=""
                       type="datetime-local"
                       value={form.start_date}
-                      onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                      onChange={(val) => setForm({ ...form, start_date: val })}
+                      brandColor="#3b82f6"
+                      brandColorHover="#2563eb"
+                      brandColorBorder="#93c5fd"
                     />
                   </FormGroup>
-                  <FormGroup>
+                  <FormGroup style={{ overflow: 'visible' }}>
                     <FormLabel>Thời gian kết thúc</FormLabel>
-                    <FormInput
+                    <DateTimePicker
+                      label=""
                       type="datetime-local"
                       value={form.end_date}
-                      onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                      onChange={(val) => setForm({ ...form, end_date: val })}
+                      brandColor="#3b82f6"
+                      brandColorHover="#2563eb"
+                      brandColorBorder="#93c5fd"
                     />
                   </FormGroup>
                 </FormRow>

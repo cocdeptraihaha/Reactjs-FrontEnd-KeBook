@@ -574,6 +574,9 @@ export function AdminPromotionsPage() {
                         type="datetime-local"
                         value={form.start_date}
                         onChange={(val) => setForm({ ...form, start_date: val })}
+                        brandColor="#3b82f6"
+                        brandColorHover="#2563eb"
+                        brandColorBorder="#93c5fd"
                       />
                     </FormGroup>
                     <FormGroup style={{ overflow: 'visible' }}>
@@ -583,6 +586,9 @@ export function AdminPromotionsPage() {
                         type="datetime-local"
                         value={form.end_date}
                         onChange={(val) => setForm({ ...form, end_date: val })}
+                        brandColor="#3b82f6"
+                        brandColorHover="#2563eb"
+                        brandColorBorder="#93c5fd"
                       />
                     </FormGroup>
                   </FormRow>

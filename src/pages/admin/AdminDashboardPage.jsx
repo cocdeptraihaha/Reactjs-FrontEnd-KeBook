@@ -267,11 +267,17 @@ export function AdminDashboardPage() {
             label="Từ"
             value={fromDate}
             onChange={(val) => setFromDate(val)}
+            brandColor="#3b82f6"
+            brandColorHover="#2563eb"
+            brandColorBorder="#93c5fd"
           />
           <DateTimePicker
             label="Đến"
             value={toDate}
             onChange={(val) => setToDate(val)}
+            brandColor="#3b82f6"
+            brandColorHover="#2563eb"
+            brandColorBorder="#93c5fd"
           />
           <ExportPdfButton onClick={() => window.print()}>
             <Printer size={16} /> Xuất PDF
