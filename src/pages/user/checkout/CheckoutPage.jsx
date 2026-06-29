@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { addressesApi } from '../../../api/addresses'
 import { cartApi } from '../../../api/cart'
 import { ordersApi } from '../../../api/orders'
@@ -9,6 +9,7 @@ import { AddressChoice, AddressChoices, AddressName, Badge, Btn, CheckoutGrid, C
 
 export function CheckoutPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [items, setItems] = useState([])
   const [addresses, setAddresses] = useState([])
   const [selectedAddressId, setSelectedAddressId] = useState('')
@@ -26,41 +27,68 @@ export function CheckoutPage() {
   async function loadCheckout() {
     try {
       setLoading(true)
-      const [cartRows, summaryRows, addressRows] = await Promise.all([
-        cartApi.get(),
-        cartApi.summary(),
-        addressesApi.mine().catch(() => []),
-      ])
-      const quantityByBookId = new Map()
-      const cartIdByBookId = new Map()
-      for (const row of cartRows || []) {
-        const key = Number(row?.book_id)
-        if (Number.isFinite(key)) {
-          quantityByBookId.set(key, Number(row?.quantity || 0))
-          cartIdByBookId.set(key, row?.id)
-        }
-      }
-      const merged = (summaryRows || []).map((row) => {
-        const key = Number(row?.book_id)
-        return {
-          ...row,
-          quantity: quantityByBookId.get(key) ?? Number(row?.quantity || 0),
-          cart_id: cartIdByBookId.get(key) ?? row?.id,
-        }
-      })
-      setItems(merged)
-      setAddresses(addressRows || [])
-      setSelectedAddressId((current) => {
-        if (current) return current
-        const defaultAddress = (addressRows || []).find((address) => address?.is_default)
-        return String(defaultAddress?.id || addressRows?.[0]?.id || '')
-      })
+      const buyNow = location.state?.buyNowItem
+      if (buyNow) {
+        const addressRows = await addressesApi.mine().catch(() => [])
+        setItems([
+          {
+            book_id: buyNow.book_id,
+            title: buyNow.title,
+            price: buyNow.price,
+            quantity: buyNow.quantity,
+            cart_id: 'buynow-1',
+          },
+        ])
+        setAddresses(addressRows || [])
+        setSelectedAddressId((current) => {
+          if (current) return current
+          const defaultAddress = (addressRows || []).find((address) => address?.is_default)
+          return String(defaultAddress?.id || addressRows?.[0]?.id || '')
+        })
 
-      // Fetch available promotions
-      const currentSubtotal = merged.reduce((acc, item) => acc + Number(item?.price || 0) * Number(item?.quantity || 0), 0)
-      if (currentSubtotal > 0) {
-        const promos = await promotionsApi.listAvailable(currentSubtotal).catch(() => [])
-        setAvailablePromos(promos || [])
+        // Fetch available promotions
+        const currentSubtotal = buyNow.price * buyNow.quantity
+        if (currentSubtotal > 0) {
+          const promos = await promotionsApi.listAvailable(currentSubtotal).catch(() => [])
+          setAvailablePromos(promos || [])
+        }
+      } else {
+        const [cartRows, summaryRows, addressRows] = await Promise.all([
+          cartApi.get(),
+          cartApi.summary(),
+          addressesApi.mine().catch(() => []),
+        ])
+        const quantityByBookId = new Map()
+        const cartIdByBookId = new Map()
+        for (const row of cartRows || []) {
+          const key = Number(row?.book_id)
+          if (Number.isFinite(key)) {
+            quantityByBookId.set(key, Number(row?.quantity || 0))
+            cartIdByBookId.set(key, row?.id)
+          }
+        }
+        const merged = (summaryRows || []).map((row) => {
+          const key = Number(row?.book_id)
+          return {
+            ...row,
+            quantity: quantityByBookId.get(key) ?? Number(row?.quantity || 0),
+            cart_id: cartIdByBookId.get(key) ?? row?.id,
+          }
+        })
+        setItems(merged)
+        setAddresses(addressRows || [])
+        setSelectedAddressId((current) => {
+          if (current) return current
+          const defaultAddress = (addressRows || []).find((address) => address?.is_default)
+          return String(defaultAddress?.id || addressRows?.[0]?.id || '')
+        })
+
+        // Fetch available promotions
+        const currentSubtotal = merged.reduce((acc, item) => acc + Number(item?.price || 0) * Number(item?.quantity || 0), 0)
+        if (currentSubtotal > 0) {
+          const promos = await promotionsApi.listAvailable(currentSubtotal).catch(() => [])
+          setAvailablePromos(promos || [])
+        }
       }
     } catch (e) {
       setError(e.message || 'Failed to load checkout')
@@ -116,12 +144,15 @@ export function CheckoutPage() {
     }
 
     try {
+      setLoading(true)
       setError('')
+      const buyNow = location.state?.buyNowItem
       const payload = {
         address_id: selectedAddress.id,
         payment_method: paymentMethod,
         ...(form.note.trim() ? { note: form.note.trim() } : {}),
         ...(promotion.trim() ? { promotion_code: promotion.trim() } : {}),
+        ...(buyNow ? { items: [{ book_id: Number(buyNow.book_id), quantity: Number(buyNow.quantity) }] } : {}),
       }
       const resp = await ordersApi.checkout(payload)
       if (resp && resp.payment_url) {
@@ -131,6 +162,7 @@ export function CheckoutPage() {
       }
     } catch (x) {
       setError(x.message || 'Checkout failed')
+      setLoading(false)
     }
   }
 

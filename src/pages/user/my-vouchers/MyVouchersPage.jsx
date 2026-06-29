@@ -254,6 +254,12 @@ export function MyVouchersPage() {
     })
   }
 
+  const activeVouchers = (s.data || []).filter((promo) => {
+    if (promo.used) return false
+    if (promo.end_date && new Date(promo.end_date) < new Date()) return false
+    return true
+  })
+
   return (
     <Wrap style={{ padding: '16px 0' }}>
       <Section>
@@ -262,9 +268,9 @@ export function MyVouchersPage() {
             <Title>
               <Tag size={22} style={{ color: 'var(--brand-900)' }} /> Kho Voucher Của Tôi
             </Title>
-            {s.data && s.data.length > 0 && (
+            {activeVouchers.length > 0 && (
               <VoucherCountBadge>
-                {s.data.length} Voucher
+                {activeVouchers.length} Voucher
               </VoucherCountBadge>
             )}
           </HeaderSection>
@@ -272,17 +278,17 @@ export function MyVouchersPage() {
           {s.loading && <P style={{ textAlign: 'center', padding: '24px' }}>Đang tải danh sách voucher...</P>}
           {s.error && <Alert role="alert">Lỗi tải dữ liệu: {s.error}</Alert>}
 
-          {!s.loading && !s.error && (!s.data || s.data.length === 0) && (
+          {!s.loading && !s.error && activeVouchers.length === 0 && (
             <EmptyStateContainer>
               <Tag size={48} style={{ color: 'rgba(185, 170, 150, 0.4)', strokeWidth: 1.5 }} />
               <EmptyTitle>Kho voucher trống</EmptyTitle>
-              <P>Bạn chưa sở hữu hoặc chưa được phát voucher cá nhân nào.</P>
+              <P>Không có voucher khả dụng nào trong kho của bạn.</P>
             </EmptyStateContainer>
           )}
 
-          {!s.loading && s.data && s.data.length > 0 && (
+          {!s.loading && activeVouchers.length > 0 && (
             <VoucherGrid>
-              {s.data.map((promo) => {
+              {activeVouchers.map((promo) => {
                 const hasPercent = promo.discount_percent && promo.discount_percent > 0
                 const hasAmount = promo.discount_amount && promo.discount_amount > 0
                 const isFreeShip = Boolean(promo.free_shipping)

@@ -63,7 +63,7 @@ export function AdminBookDiscountsPage({ isSubTab = false }) {
       setError(null)
       const [discountData, booksRes] = await Promise.all([
         bookDiscountsApi.list(),
-        booksApi.adminList({ size: 1000 }).catch(() => ({ data: [] }))
+        booksApi.adminList({ size: 10 }).catch(() => ({ data: [] }))
       ])
       setDiscounts(discountData || [])
       setBooks(booksRes?.data || [])
@@ -78,6 +78,29 @@ export function AdminBookDiscountsPage({ isSubTab = false }) {
     void fetchDiscountsAndBooks()
   }, [])
 
+  // Dynamic API search for books with debounce
+  useEffect(() => {
+    const delayDebounce = setTimeout(async () => {
+      try {
+        const booksRes = await booksApi.adminList({
+          size: 20,
+          q: bookSearch.trim() || undefined
+        })
+        const newBooks = booksRes?.data || []
+        setBooks(prevBooks => {
+          const map = new Map()
+          prevBooks.forEach(b => map.set(b.id, b))
+          newBooks.forEach(b => map.set(b.id, b))
+          return Array.from(map.values())
+        })
+      } catch (err) {
+        console.error('Lỗi tìm kiếm sách:', err)
+      }
+    }, 300)
+
+    return () => clearTimeout(delayDebounce)
+  }, [bookSearch])
+
   const handleOpenCreate = () => {
     setBookSearch('')
     setForm({
@@ -89,14 +112,34 @@ export function AdminBookDiscountsPage({ isSubTab = false }) {
     setActiveModal('create')
   }
 
-  const handleOpenEdit = (discount) => {
+  const handleOpenEdit = async (discount) => {
     setBookSearch('')
     setSelectedPromo(discount)
+
+    // Fetch any associated books that are not in the local state
+    const missingIds = (discount.book_ids || []).filter(id => !books.some(b => b.id === id))
+    if (missingIds.length > 0) {
+      try {
+        const fetchedBooks = await Promise.all(
+          missingIds.map(id => booksApi.detail(id).catch(() => null))
+        )
+        const validFetched = fetchedBooks.filter(Boolean)
+        setBooks(prev => {
+          const map = new Map()
+          prev.forEach(b => map.set(b.id, b))
+          validFetched.forEach(b => map.set(b.id, b))
+          return Array.from(map.values())
+        })
+      } catch (err) {
+        console.error('Lỗi tải sách liên kết:', err)
+      }
+    }
+
     setForm({
       discount_percent: discount.discount_percent || '',
       start_date: discount.start_date ? discount.start_date.substring(0, 16) : '',
       end_date: discount.end_date ? discount.end_date.substring(0, 16) : '',
-      book_ids: Array.isArray(discount.books) ? discount.books.map(b => b.id) : []
+      book_ids: Array.isArray(discount.book_ids) ? discount.book_ids : []
     })
     setActiveModal('edit')
   }
@@ -183,10 +226,13 @@ export function AdminBookDiscountsPage({ isSubTab = false }) {
     if (!q) return true
 
     const matchesPercent = String(discount.discount_percent).includes(q)
-    const matchesBooks = Array.isArray(discount.books) && discount.books.some(b =>
-      (b.title || '').toLowerCase().includes(q) ||
-      (b.author || '').toLowerCase().includes(q)
-    )
+    const matchesBooks = (discount.book_ids || [])
+      .map(id => books.find(b => b.id === id))
+      .filter(Boolean)
+      .some(b =>
+        (b.title || '').toLowerCase().includes(q) ||
+        (b.author || '').toLowerCase().includes(q)
+      )
 
     return matchesPercent || matchesBooks
   })
@@ -245,30 +291,38 @@ export function AdminBookDiscountsPage({ isSubTab = false }) {
                       {discount.discount_percent}%
                     </Td>
                     <Td style={{ maxWidth: '400px' }}>
-                      {Array.isArray(discount.books) && discount.books.length > 0 ? (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {discount.books.map(b => (
-                            <span
-                              key={b.id}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                fontSize: '11px',
-                                backgroundColor: '#f1f5f9',
-                                border: '1px solid #cbd5e1',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                color: '#334155'
-                              }}
-                            >
-                              {b.title}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Chưa áp dụng cho sách nào</span>
-                      )}
+                      {(() => {
+                        const associatedBooks = (discount.book_ids || [])
+                          .map(id => books.find(b => b.id === id))
+                          .filter(Boolean)
+
+                        if (associatedBooks.length === 0) {
+                          return <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Chưa áp dụng cho sách nào</span>
+                        }
+
+                        return (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {associatedBooks.map(b => (
+                              <span
+                                key={b.id}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '11px',
+                                  backgroundColor: '#f1f5f9',
+                                  border: '1px solid #cbd5e1',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  color: '#334155'
+                                }}
+                              >
+                                {b.title}
+                              </span>
+                            ))}
+                          </div>
+                        )
+                      })()}
                     </Td>
                     <Td>{formatDate(discount.start_date)}</Td>
                     <Td>{formatDate(discount.end_date)}</Td>

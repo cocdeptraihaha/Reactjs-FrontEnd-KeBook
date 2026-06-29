@@ -41,6 +41,44 @@ import {
   PaginationInfo,
   PaginationControls,
   PaginationButton,
+  DetailContainer,
+  DetailHeader,
+  HeaderNav,
+  HeaderStatus,
+  ShopeeTimeline,
+  TimelineProgressLine,
+  TimelineProgressActive,
+  TimelineStep,
+  StepIconWrap,
+  StepContent,
+  AddressBorder,
+  InfoSection,
+  BlockPanel,
+  BlockHeader,
+  BlockBody,
+  LogisticsRow,
+  ShopeeItemCard,
+  ShopHeader,
+  ShopInfo,
+  ShopeeItemRow,
+  ShopeeItemImage,
+  ShopeeItemDetails,
+  ShopeeItemName,
+  ShopeeItemQuantity,
+  ShopeeItemPrice,
+  PricingBreakdown,
+  PricingRow,
+  HistoryList,
+  HistoryRow,
+  DetailCard,
+  DetailCardTitle,
+  ReturnItemCard,
+  ReturnItemCardHeader,
+  ReturnItemTitle,
+  ReturnItemStatus,
+  ReturnItemReason,
+  ReturnItemRefund,
+  DetailFooterActions,
 } from './OrdersPage.styles'
 
 
@@ -282,8 +320,7 @@ export function OrderHistoryPage() {
                   <Actions>
                     <ActionBtn type="button" onClick={() => navigate(`/app/orders/${order.id}`)}>Chi tiết</ActionBtn>
                     {order?.payment_method === 'VNPAY' &&
-                      order?.payment_status !== 'SUCCESS' &&
-                      order?.payment_status !== 'SUCCESS_MANUAL_REVIEW' &&
+                      order?.payment_status === 'UNPAID' &&
                       status !== 'CANCELLED' && (
                         <ActionBtn
                           type="button"
@@ -346,6 +383,7 @@ export function OrderHistoryPage() {
 
 export function OrderDetailPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const location = useLocation()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -359,11 +397,26 @@ export function OrderDetailPage() {
   const [returnBusy, setReturnBusy] = useState(false)
   const [existingReturns, setExistingReturns] = useState([])
   const [payBusy, setPayBusy] = useState(false)
+  const [cancelBusy, setCancelBusy] = useState(false)
 
   const showReturnForm = useMemo(() => {
     const params = new URLSearchParams(location.search)
     return params.get('action') === 'return'
   }, [location.search])
+
+  async function handleCancel() {
+    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) return
+    try {
+      setCancelBusy(true)
+      await ordersApi.cancel(id)
+      toast.success('Hủy đơn hàng thành công')
+      void load()
+    } catch (e) {
+      toast.error(e.message || 'Hủy đơn hàng thất bại')
+    } finally {
+      setCancelBusy(false)
+    }
+  }
 
   async function handlePayAgain() {
     try {
@@ -464,46 +517,280 @@ export function OrderDetailPage() {
     }
   }
 
-  return (
-    <Wrap>
-      <Section>
-        <SectionTitle>Chi tiết đơn hàng #{id}</SectionTitle>
-        <SectionSub>Xem thông tin sản phẩm đã đặt và tổng quan vận chuyển/thanh toán.</SectionSub>
-      </Section>
+  // Calculate timeline progress
+  const timelineProgressPercentage = useMemo(() => {
+    switch (status) {
+      case 'PENDING': return '0%'
+      case 'CONFIRMED': return '25%'
+      case 'INPROGRESS': return '50%'
+      case 'SHIPPED': return '75%'
+      case 'DELIVERED':
+      case 'COMPLETED': return '100%'
+      default: return '0%'
+    }
+  }, [status])
 
-      {loading && <StateText>Đang tải chi tiết đơn...</StateText>}
-      {!loading && error && <AlertText role="alert">{error}</AlertText>}
+  // Find dynamic history dates
+  const historyDates = useMemo(() => {
+    const dates = {
+      PENDING: null,
+      CONFIRMED: null,
+      INPROGRESS: null,
+      SHIPPED: null,
+      DELIVERED: null,
+      COMPLETED: null,
+      CANCELLED: null,
+    }
+    if (order?.status_history) {
+      order.status_history.forEach(h => {
+        if (h.status) {
+          dates[normalizeStatus(h.status)] = h.status_change_date
+        }
+      })
+    }
+    // Fallbacks
+    if (!dates.PENDING && order?.order_date) dates.PENDING = order.order_date
+    return dates
+  }, [order])
+
+  const itemsSubtotal = useMemo(() => {
+    return items.reduce((acc, it) => acc + (Number(it.price || 0) * Number(it.quantity || 1)), 0)
+  }, [items])
+
+  return (
+    <DetailContainer>
+      <DetailHeader>
+        <HeaderNav>
+          <Link to="/app/orders">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            TRỞ VỀ
+          </Link>
+        </HeaderNav>
+        <HeaderStatus>
+          <span className="code">MÃ ĐƠN HÀNG: #{id}</span>
+          <span className="divider">|</span>
+          <span className="status">{STATUS_LABELS[status] || status || '-'}</span>
+        </HeaderStatus>
+      </DetailHeader>
+
+      {loading && <StateText style={{ textAlign: 'center', padding: '40px' }}>Đang tải chi tiết đơn hàng...</StateText>}
+      {!loading && error && <AlertText role="alert" style={{ textAlign: 'center', padding: '40px' }}>{error}</AlertText>}
 
       {!loading && !error && order && (
-        <Card>
-          <CardHead>
-            <OrderCode>#{order.id}</OrderCode>
-            <StatusChip $color={STATUS_COLORS[status]}>{STATUS_LABELS[status] || status || '-'}</StatusChip>
-          </CardHead>
-          <Footer>
-            <FooterText>Ngày đặt: {formatDateTime(order.order_date)}</FooterText>
-            <FooterText>SĐT: {order.phone_number || '-'}</FooterText>
-            <FooterText>Địa chỉ: {order.shipping_address || '-'}</FooterText>
-            <FooterText>Tổng tiền: {formatMoney(order.total_price || 0)}</FooterText>
-          </Footer>
-          <ItemList>
-            {items.map((item, idx) => (
-              <ItemRow key={item.id || `${order.id}-${idx}`}>
-                <Cover>{item?.image_url ? <CoverImg src={item.image_url} alt={item.book_title || 'Book'} /> : null}</Cover>
-                <div>
-                  <ItemTitle>{item?.book_title || `Book #${item?.book_id || '-'}`}</ItemTitle>
-                  <ItemMeta>Số lượng: {item?.quantity || 0}</ItemMeta>
-                </div>
-                <Price>{formatMoney(item?.price || 0)}</Price>
-              </ItemRow>
-            ))}
-          </ItemList>
+        <>
+          {/* Visual Timeline (inspired by Shopee) */}
+          {status !== 'CANCELLED' && status !== 'CANCEL_REQUESTED' && status !== 'RETURNED' && (
+            <ShopeeTimeline>
+              <TimelineProgressLine>
+                <TimelineProgressActive $percentage={timelineProgressPercentage} />
+              </TimelineProgressLine>
+
+              <TimelineStep>
+                <StepIconWrap $active={true}>
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </StepIconWrap>
+                <StepContent $active={true}>
+                  <div className="title">Đơn Hàng Đã Đặt</div>
+                  <div className="time">{formatDateTime(historyDates.PENDING)}</div>
+                </StepContent>
+              </TimelineStep>
+
+              <TimelineStep>
+                <StepIconWrap $active={['CONFIRMED', 'INPROGRESS', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(status)}>
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </StepIconWrap>
+                <StepContent $active={['CONFIRMED', 'INPROGRESS', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(status)}>
+                  <div className="title">Đã Xác Nhận</div>
+                  <div className="time">{formatDateTime(historyDates.CONFIRMED)}</div>
+                </StepContent>
+              </TimelineStep>
+
+              <TimelineStep>
+                <StepIconWrap $active={['INPROGRESS', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(status)}>
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </StepIconWrap>
+                <StepContent $active={['INPROGRESS', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(status)}>
+                  <div className="title">Đang Chuẩn Bị</div>
+                  <div className="time">{formatDateTime(historyDates.INPROGRESS)}</div>
+                </StepContent>
+              </TimelineStep>
+
+              <TimelineStep>
+                <StepIconWrap $active={['SHIPPED', 'DELIVERED', 'COMPLETED'].includes(status)}>
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                  </svg>
+                </StepIconWrap>
+                <StepContent $active={['SHIPPED', 'DELIVERED', 'COMPLETED'].includes(status)}>
+                  <div className="title">Đang Giao Hàng</div>
+                  <div className="time">{formatDateTime(historyDates.SHIPPED)}</div>
+                </StepContent>
+              </TimelineStep>
+
+              <TimelineStep>
+                <StepIconWrap $active={['DELIVERED', 'COMPLETED'].includes(status)}>
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </StepIconWrap>
+                <StepContent $active={['DELIVERED', 'COMPLETED'].includes(status)}>
+                  <div className="title">Đơn Hoàn Thành</div>
+                  <div className="time">{formatDateTime(historyDates.DELIVERED || historyDates.COMPLETED)}</div>
+                </StepContent>
+              </TimelineStep>
+            </ShopeeTimeline>
+          )}
+
+          {/* Customer Address & Delivery Carrier section */}
+          <div>
+            <AddressBorder />
+            <InfoSection>
+              <BlockPanel $borderRight={true}>
+                <BlockHeader>
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Địa Chỉ Nhận Hàng
+                </BlockHeader>
+                <BlockBody>
+                  <div className="name">{order.full_name || 'Khách nhận'}</div>
+                  <div className="phone">{order.phone_number || '-'}</div>
+                  <div className="address">{order.shipping_address || 'Chưa cập nhật địa chỉ'}</div>
+                  {order.note && <div className="note"><strong>Ghi chú:</strong> {order.note}</div>}
+                </BlockBody>
+              </BlockPanel>
+
+              <BlockPanel>
+                <BlockHeader>
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  Thông Tin Giao Nhận & Thanh Toán
+                </BlockHeader>
+                <BlockBody>
+                  <LogisticsRow>
+                    <span>Hình thức vận chuyển:</span>
+                    <span>{order.shipping_provider || 'Standard Shipping'}</span>
+                  </LogisticsRow>
+                  {order.tracking_number && (
+                    <LogisticsRow>
+                      <span>Mã vận đơn:</span>
+                      <span style={{ color: 'var(--brand-700)' }}>{order.tracking_number}</span>
+                    </LogisticsRow>
+                  )}
+                  <LogisticsRow>
+                    <span>Phương thức thanh toán:</span>
+                    <span>
+                      {order.payment_method === 'COD' ? 'Thanh toán khi nhận hàng (COD)' :
+                       order.payment_method === 'VNPAY' ? 'Ví điện tử VNPAY' :
+                       order.payment_method === 'BANK_TRANSFER' ? 'Chuyển khoản ngân hàng' :
+                       order.payment_method || 'Chưa xác định'}
+                    </span>
+                  </LogisticsRow>
+                  <LogisticsRow>
+                    <span>Trạng thái thanh toán:</span>
+                    <span style={{ color: order.payment_status === 'PAID' ? '#16a34a' : '#ea580c' }}>
+                      {order.payment_status === 'PAID' ? 'Đã thanh toán thành công' : 'Chưa thanh toán'}
+                    </span>
+                  </LogisticsRow>
+                </BlockBody>
+              </BlockPanel>
+            </InfoSection>
+          </div>
+
+          {/* Product Items Details Card */}
+          <ShopeeItemCard>
+
+            <div>
+              {items.map((item, idx) => (
+                <ShopeeItemRow key={item.id || `${order.id}-${idx}`}>
+                  <ShopeeItemImage>
+                    {item?.image_url ? (
+                      <img src={item.image_url} alt={item.book_title || 'Sách'} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: '11px' }}>Sách</div>
+                    )}
+                  </ShopeeItemImage>
+                  <ShopeeItemDetails>
+                    <ShopeeItemName>{item?.book_title || `Sách #${item?.book_id || '-'}`}</ShopeeItemName>
+                    <ShopeeItemQuantity>Số lượng: x{item?.quantity || 0}</ShopeeItemQuantity>
+                  </ShopeeItemDetails>
+                  <ShopeeItemPrice>
+                    <span className="price">{formatMoney(item?.price || 0)}</span>
+                  </ShopeeItemPrice>
+                </ShopeeItemRow>
+              ))}
+            </div>
+          </ShopeeItemCard>
+
+          {/* Detailed Pricing Breakdown Block */}
+          <PricingBreakdown>
+            <PricingRow>
+              <div className="label">Tổng tiền hàng</div>
+              <div className="value">{formatMoney(itemsSubtotal)}</div>
+            </PricingRow>
+            {order.shipping_fee > 0 && (
+              <PricingRow>
+                <div className="label">Phí vận chuyển</div>
+                <div className="value">{formatMoney(order.shipping_fee)}</div>
+              </PricingRow>
+            )}
+            {order.discount_amount > 0 && (
+              <PricingRow className="discount">
+                <div className="label">Giảm giá voucher</div>
+                <div className="value">-{formatMoney(order.discount_amount)}</div>
+              </PricingRow>
+            )}
+            {order.points_discount > 0 && (
+              <PricingRow className="discount">
+                <div className="label">Loyalty points giảm</div>
+                <div className="value">-{formatMoney(order.points_discount)}</div>
+              </PricingRow>
+            )}
+            <PricingRow className="grand-total">
+              <div className="label">Thành tiền</div>
+              <div className="value">{formatMoney(order.total_price || 0)}</div>
+            </PricingRow>
+          </PricingBreakdown>
+
+          {/* Order Transition Status History (Shopee style timeline listing) */}
+          {order.status_history && order.status_history.length > 0 && (
+            <DetailCard>
+              <DetailCardTitle>Lịch Sử Hành Trình Đơn Hàng</DetailCardTitle>
+              <HistoryList>
+                {order.status_history.map((h, index) => {
+                  const s = normalizeStatus(h.status)
+                  const isActive = index === 0 // Most recent is active
+                  return (
+                    <HistoryRow key={h.id || index} className={isActive ? 'active' : ''}>
+                      <div className="date">{formatDateTime(h.status_change_date)}</div>
+                      <div className="desc">
+                        <strong>[{STATUS_LABELS[s] || s}]</strong> {h.description || 'Cập nhật trạng thái đơn hàng'}
+                      </div>
+                    </HistoryRow>
+                  )
+                })}
+              </HistoryList>
+            </DetailCard>
+          )}
+
+          {/* Return panel form */}
           {returnAllowed && showReturnForm && (
             <ReturnPanel onSubmit={submitReturnRequest}>
-              <ReturnTitle>Yêu cầu hoàn trả</ReturnTitle>
+              <ReturnTitle>Yêu cầu hoàn trả sản phẩm</ReturnTitle>
               <ReturnGrid>
                 <ReturnField>
-                  Sản phẩm
+                  Sản phẩm hoàn trả
                   <ReturnSelect value={returnItemId} onChange={(event) => {
                     const itemId = event.target.value
                     setReturnItemId(itemId)
@@ -512,7 +799,7 @@ export function OrderDetailPage() {
                     <option value="">Chọn sản phẩm</option>
                     {items.map((item, idx) => (
                       <option key={item.id || item.order_item_id || `${order.id}-return-${idx}`} value={item.id || item.order_item_id}>
-                        {item.book_title || `Book #${item.book_id || '-'}`}
+                        {item.book_title || `Sách #${item.book_id || '-'}`}
                       </option>
                     ))}
                   </ReturnSelect>
@@ -527,14 +814,14 @@ export function OrderDetailPage() {
                     onChange={(event) => setReturnQuantity(event.target.value)}
                   />
                 </ReturnField>
-                <ActionBtn type="submit" disabled={returnBusy || uploadingImage}>Gửi return</ActionBtn>
+                <ActionBtn type="submit" disabled={returnBusy || uploadingImage} style={{ background: 'var(--berry-700)', color: '#fff', borderColor: 'var(--berry-700)' }}>Gửi yêu cầu</ActionBtn>
               </ReturnGrid>
-              <ReturnField>
-                Lý do
-                <ReturnTextarea value={returnReason} onChange={(event) => setReturnReason(event.target.value)} />
+              <ReturnField style={{ marginTop: '12.5px' }}>
+                Lý do hoàn trả chi tiết
+                <ReturnTextarea value={returnReason} onChange={(event) => setReturnReason(event.target.value)} placeholder="Vui lòng nhập lý do cụ thể..." />
               </ReturnField>
-              <ReturnField style={{ marginTop: '12px' }}>
-                Ảnh minh chứng sản phẩm hỏng/lỗi
+              <ReturnField style={{ marginTop: '12.5px' }}>
+                Ảnh minh chứng sản phẩm lỗi (tải lên tối đa 1 ảnh)
                 <input
                   type="file"
                   accept="image/*"
@@ -542,13 +829,13 @@ export function OrderDetailPage() {
                   disabled={uploadingImage}
                   style={{ marginTop: '6px', fontSize: '13px' }}
                 />
-                {uploadingImage && <span style={{ fontSize: '12px', color: '#3b82f6', marginTop: '4px' }}>Đang tải ảnh lên...</span>}
+                {uploadingImage && <span style={{ fontSize: '12px', color: 'var(--blue-700)', marginTop: '4px' }}>Đang tải ảnh lên...</span>}
                 {localFilePreview && (
                   <div style={{ marginTop: '8px' }}>
                     <img
                       src={localFilePreview}
                       alt="Local preview"
-                      style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                      style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--line)' }}
                     />
                   </div>
                 )}
@@ -557,90 +844,85 @@ export function OrderDetailPage() {
           )}
 
           {existingReturns.length > 0 && (
-            <div style={{ marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--brand-900)', marginBottom: '12px' }}>
-                Yêu cầu hoàn trả đã gửi
-              </h3>
+            <DetailCard>
+              <DetailCardTitle>Yêu Cầu Hoàn Trả Đã Gửi</DetailCardTitle>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {existingReturns.map((ret) => {
                   const matchedItem = items.find(it => String(it.id || it.order_item_id) === String(ret.order_item_id))
                   return (
-                    <div
-                      key={ret.id}
-                      style={{
-                        padding: '16px',
-                        backgroundColor: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b' }}>
+                    <ReturnItemCard key={ret.id}>
+                      <ReturnItemCardHeader>
+                        <ReturnItemTitle>
                           Sách: {matchedItem?.book_title || `Sản phẩm #${ret.order_item_id}`} (SL: {ret.quantity})
-                        </span>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            padding: '4px 8px',
-                            borderRadius: '12px',
-                            backgroundColor:
-                              ret.status === 'APPROVED' ? '#dcfce7' : ret.status === 'REJECTED' ? '#fee2e2' : '#fef3c7',
-                            color:
-                              ret.status === 'APPROVED' ? '#15803d' : ret.status === 'REJECTED' ? '#b91c1c' : '#b45309',
-                          }}
+                        </ReturnItemTitle>
+                        <ReturnItemStatus
+                          $approved={ret.status === 'APPROVED'}
+                          $rejected={ret.status === 'REJECTED'}
                         >
                           {ret.status === 'APPROVED' ? 'Đã duyệt' : ret.status === 'REJECTED' ? 'Từ chối' : 'Chờ xử lý'}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '13px', color: '#475569' }}>
+                        </ReturnItemStatus>
+                      </ReturnItemCardHeader>
+                      <ReturnItemReason>
                         <strong>Lý do:</strong> {ret.reason || '(Không có)'}
-                      </div>
+                      </ReturnItemReason>
                       {ret.refund_amount > 0 && (
-                        <div style={{ fontSize: '13px', color: '#16a34a', fontWeight: 700 }}>
+                        <ReturnItemRefund>
                           <strong>Số tiền hoàn lại:</strong> {formatMoney(ret.refund_amount)}
-                        </div>
+                        </ReturnItemRefund>
                       )}
                       {ret.image_url && (
                         <div style={{ marginTop: '6px' }}>
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
                             Ảnh minh chứng:
                           </span>
                           <img
                             src={ret.image_url}
                             alt="Proof"
-                            style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                            style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--line)' }}
                           />
                         </div>
                       )}
-                    </div>
+                    </ReturnItemCard>
                   )
                 })}
               </div>
-            </div>
+            </DetailCard>
           )}
 
-          <Actions>
+          {/* Action buttons (inspired by Shopee details actions list) */}
+          <DetailFooterActions>
             <ActionBtn as={Link} to="/app/orders">Quay lại danh sách</ActionBtn>
+
+            {canCancel(status) && (
+              <ActionBtn
+                type="button"
+                disabled={cancelBusy}
+                onClick={handleCancel}
+                style={{ backgroundColor: 'var(--danger-700)', color: '#fff', borderColor: 'var(--danger-700)' }}
+              >
+                {cancelBusy ? 'Đang hủy...' : 'Hủy đơn'}
+              </ActionBtn>
+            )}
+
             {order?.payment_method === 'VNPAY' &&
-              order?.payment_status !== 'SUCCESS' &&
-              order?.payment_status !== 'SUCCESS_MANUAL_REVIEW' &&
+              order?.payment_status === 'UNPAID' &&
               status !== 'CANCELLED' && (
                 <ActionBtn
                   type="button"
                   disabled={payBusy}
                   onClick={() => void handlePayAgain()}
-                  style={{ backgroundColor: 'var(--brand-700)', color: '#fff' }}
+                  style={{ backgroundColor: 'var(--berry-700)', color: '#fff', borderColor: 'var(--berry-700)' }}
                 >
-                  Thanh toán lại
+                  Thanh toán ngay
                 </ActionBtn>
             )}
-          </Actions>
-        </Card>
+
+            {(status === 'SHIPPED' || status === 'DELIVERED' || status === 'COMPLETED') && !showReturnForm && (
+              <ActionBtn type="button" onClick={() => navigate(`/app/orders/${order.id}?action=return`)}>Yêu cầu Trả hàng</ActionBtn>
+            )}
+          </DetailFooterActions>
+        </>
       )}
-    </Wrap>
+    </DetailContainer>
   )
 }

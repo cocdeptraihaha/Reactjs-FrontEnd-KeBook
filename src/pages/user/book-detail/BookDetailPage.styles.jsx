@@ -437,3 +437,26 @@ export const ReviewContent = styled.p`
   white-space: pre-wrap;
 `
 
+export const HeartBtn = styled.button`
+  border: 1px solid ${(p) => (p.$active ? 'var(--berry-600)' : 'rgba(30, 74, 42, 0.25)')};
+  border-radius: var(--radius-pill);
+  min-height: 46px;
+  width: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: ${(p) => (p.$active ? 'var(--berry-50, #fdf2f4)' : 'transparent')};
+  color: ${(p) => (p.$active ? 'var(--berry-600)' : 'var(--brand-900)')};
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  svg {
+    fill: ${(p) => (p.$active ? 'var(--berry-600)' : 'none')};
+  }
+
+  &:hover {
+    background-color: ${(p) => (p.$active ? 'var(--berry-100, #fce7eb)' : 'rgba(30, 74, 42, 0.05)')};
+  }
+`
+
+

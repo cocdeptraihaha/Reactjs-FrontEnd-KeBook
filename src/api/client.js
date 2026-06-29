@@ -96,7 +96,7 @@ async function request(path, { method = 'GET', body, headers, timeoutMs = DEFAUL
         }
 
         // Auto-logout on token expiration (401 Unauthorized)
-        if (response.status === 401) {
+        if (response.status === 401 && !path.startsWith('/auth/')) {
           localStorage.removeItem('access_token')
           localStorage.removeItem('auth_user')
           // Force page reload to trigger Router redirection

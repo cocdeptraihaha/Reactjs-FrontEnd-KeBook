@@ -32,6 +32,13 @@ export function AuthProvider({ children }) {
     return res
   }
 
+  function setSession(nextToken, nextUser) {
+    localStorage.setItem(TOKEN_KEY, nextToken)
+    localStorage.setItem(USER_KEY, JSON.stringify(nextUser))
+    setToken(nextToken)
+    setUser(nextUser)
+  }
+
   function replaceUser(nextUser) {
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser))
     setUser(nextUser)
@@ -45,7 +52,7 @@ export function AuthProvider({ children }) {
   }
 
   const value = useMemo(
-    () => ({ token, user, isAuthenticated, isReady, login, logout, replaceUser }),
+    () => ({ token, user, isAuthenticated, isReady, login, logout, replaceUser, setSession }),
     [token, user, isAuthenticated, isReady],
   )
 

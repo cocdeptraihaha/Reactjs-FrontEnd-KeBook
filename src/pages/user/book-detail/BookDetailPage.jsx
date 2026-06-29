@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import styled from 'styled-components'
-import { AlertTriangle, X } from 'react-feather'
+import { AlertTriangle, X, Heart } from 'react-feather'
 import { booksApi, pickPrimaryImage } from '../../../api/books'
 import { cartApi } from '../../../api/cart'
 import { reviewsApi } from '../../../api/reviews'
+import { favoritesApi } from '../../../api/favorites'
 import { useAuth } from '../../../auth/auth-store'
 import { SectionSub, SectionTitle } from '../../../components/Section'
 import { ProductCard } from '../../../components/product/ProductCard'
@@ -56,6 +57,7 @@ import {
   ReviewStars,
   ReviewDate,
   ReviewContent,
+  HeartBtn,
 } from './BookDetailPage.styles'
 
 function asNumber(value, fallback = 0) {
@@ -99,22 +101,26 @@ export function BookDetailPage() {
   const [actionError, setActionError] = useState('')
   const [selectedImage, setSelectedImage] = useState('')
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
   const similarViewportRef = useRef(null)
 
   const load = useCallback(async () => {
     try {
       setLoading(true)
       setError('')
-      const [detailRes, similarRes, reviewsRes, avgRes] = await Promise.all([
+      const [detailRes, similarRes, reviewsRes, avgRes, favsRes] = await Promise.all([
         booksApi.detail(id),
         booksApi.similar(id),
         reviewsApi.listByBook(id),
         reviewsApi.averageByBook(id),
+        isAuthenticated ? favoritesApi.list().catch(() => []) : Promise.resolve([]),
       ])
       setBook(detailRes?.data || detailRes || null)
       setSimilar(similarRes?.data || similarRes || [])
       setReviews(reviewsRes?.data || reviewsRes || [])
       setAvg(avgRes?.data || avgRes || null)
+      const favs = favsRes?.data || favsRes || []
+      setIsFavorite(favs.some((f) => Number(f.id) === Number(id) || Number(f.book_id) === Number(id)))
       if (isAuthenticated) {
         void booksApi.recordView(id).catch(() => {})
       }
@@ -164,11 +170,62 @@ export function BookDetailPage() {
     try {
       setActionError('')
       await cartApi.add({ book_id: Number(id), quantity: 1 })
-      navigate('/app/cart')
+      toast.success('Đã thêm sản phẩm vào giỏ hàng thành công!')
     } catch (e) {
       const message = e.message || 'Không thể thêm quá số lượng tồn kho'
       setActionError(message)
       toast.error('Vượt quá số lượng tồn kho', { description: message })
+    }
+  }
+
+  async function handleBuyNow() {
+    if (!isAuthenticated) {
+      setShowAuthModal(true)
+      return
+    }
+
+    try {
+      setActionError('')
+      // Validate stock availability first by making sure we don't violate stock boundaries
+      const qty = 1
+      if (book?.stock_quantity !== undefined && book.stock_quantity < qty) {
+        toast.error('Sản phẩm đã hết hàng hoặc không đủ số lượng tồn kho')
+        return
+      }
+
+      navigate('/app/checkout', {
+        state: {
+          buyNowItem: {
+            book_id: Number(id),
+            title: book?.title || 'Sách',
+            price: finalPrice,
+            quantity: qty,
+          },
+        },
+      })
+    } catch (e) {
+      toast.error(e.message || 'Không thể tiến hành mua ngay')
+    }
+  }
+
+  async function handleToggleFavorite() {
+    if (!isAuthenticated) {
+      setShowAuthModal(true)
+      return
+    }
+
+    try {
+      if (isFavorite) {
+        await favoritesApi.remove(Number(id))
+        setIsFavorite(false)
+        toast.success('Đã xóa khỏi danh sách yêu thích')
+      } else {
+        await favoritesApi.add(Number(id))
+        setIsFavorite(true)
+        toast.success('Đã thêm vào danh sách yêu thích')
+      }
+    } catch (e) {
+      toast.error(e.message || 'Thao tác thất bại')
     }
   }
 
@@ -246,6 +303,20 @@ export function BookDetailPage() {
                 <PrimaryBtn type="button" onClick={handleAddToCart} disabled={!inStock}>
                   {inStock ? 'Thêm vào giỏ hàng' : 'Hết hàng'}
                 </PrimaryBtn>
+                <PrimaryBtn
+                  type="button"
+                  onClick={handleBuyNow}
+                  disabled={!inStock}
+                  style={{
+                    background: 'linear-gradient(140deg, var(--berry-800, #a44861), var(--berry-600, #b25870))',
+                    boxShadow: '0 12px 24px rgba(164, 72, 97, 0.18)',
+                  }}
+                >
+                  {inStock ? 'Mua ngay' : 'Hết hàng'}
+                </PrimaryBtn>
+                <HeartBtn type="button" $active={isFavorite} onClick={handleToggleFavorite} aria-label="Yêu thích">
+                  <Heart size={20} />
+                </HeartBtn>
               </Actions>
             </>
           )}

@@ -316,6 +316,9 @@ export function AdminOrdersPage() {
                             <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
                               PTTT: {order.payment_method || 'Không rõ'}
                             </div>
+                            <div style={{ fontSize: '11px', color: order.payment_status === 'PAID' ? '#16a34a' : '#ea580c', fontWeight: 700, marginTop: '4px' }}>
+                              Thanh toán: {order.payment_status === 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                            </div>
                           </Td>
                           <Td>
                             <StatusBadge $status={currentStatus}>{STATUS_LABELS[currentStatus] || currentStatus}</StatusBadge>

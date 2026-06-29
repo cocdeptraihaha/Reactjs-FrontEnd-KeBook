@@ -310,7 +310,7 @@ export function HomePage() {
         )}
       </Section>
 
-      <Section>
+      <HorizontalScrollSection>
         <SectionHead>
           <div>
             <SectionTitle>Giảm giá nhiều</SectionTitle>
@@ -327,7 +327,7 @@ export function HomePage() {
             badgeTone="sale"
           />
         )}
-      </Section>
+      </HorizontalScrollSection>
 
       <HorizontalScrollSection>
         <SectionHead>
