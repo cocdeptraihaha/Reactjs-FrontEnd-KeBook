@@ -30,6 +30,9 @@ dist-ssr
 .claude/
 skills-lock.json
 docs/
+CLAUDE.md
+playwright.config.js
+.env.example
 
 # Tests
 tests/
