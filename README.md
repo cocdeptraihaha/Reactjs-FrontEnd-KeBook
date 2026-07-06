@@ -165,4 +165,4 @@ rg -n "Ã|Â|Ä|Æ||Ch\\?|\\?ang|\\?\\? giao|\\?\\? h|T\\?t|Y\\?u|Ho\\?n|Gi\\?|S
 Giải pháp **KeBook Frontend (React + Vite)** là sự tổng hòa của các công nghệ giao diện Web tiên tiến. Việc tách biệt lớp trình diễn, tối ưu bộ đệm dữ liệu thông qua cơ chế SWR và bảo vệ phân quyền nghiêm ngặt không chỉ đem lại khả năng phản hồi mượt mà cho khách hàng mà còn thiết lập một quy chuẩn kỹ thuật chuyên nghiệp, dễ dàng mở rộng và nâng cấp hệ thống trong tương lai.
 
 ---
-*Tài liệu thuộc Chương trình Nghiên cứu & Phát triển Hệ thống Web Nâng cao - Dự án KeBook.*
+*Tài liệu thuộc Chương trình Nghiên cứu & Phát triển Hệ thống Web - Dự án KeBook.*
