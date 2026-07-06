@@ -24,3 +24,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Agents / local tooling
+.agents/
+.claude/
+skills-lock.json
+docs/
+
+# Tests
+tests/
+*.test.*
+*.spec.*
