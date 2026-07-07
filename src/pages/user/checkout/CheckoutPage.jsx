@@ -28,6 +28,7 @@ export function CheckoutPage() {
     try {
       setLoading(true)
       const buyNow = location.state?.buyNowItem
+      const checkoutItems = location.state?.checkoutItems
       if (buyNow) {
         const addressRows = await addressesApi.mine().catch(() => [])
         setItems([
@@ -48,6 +49,22 @@ export function CheckoutPage() {
 
         // Fetch available promotions
         const currentSubtotal = buyNow.price * buyNow.quantity
+        if (currentSubtotal > 0) {
+          const promos = await promotionsApi.listAvailable(currentSubtotal).catch(() => [])
+          setAvailablePromos(promos || [])
+        }
+      } else if (checkoutItems) {
+        const addressRows = await addressesApi.mine().catch(() => [])
+        setItems(checkoutItems)
+        setAddresses(addressRows || [])
+        setSelectedAddressId((current) => {
+          if (current) return current
+          const defaultAddress = (addressRows || []).find((address) => address?.is_default)
+          return String(defaultAddress?.id || addressRows?.[0]?.id || '')
+        })
+
+        // Fetch available promotions
+        const currentSubtotal = checkoutItems.reduce((acc, item) => acc + Number(item?.price || 0) * Number(item?.quantity || 0), 0)
         if (currentSubtotal > 0) {
           const promos = await promotionsApi.listAvailable(currentSubtotal).catch(() => [])
           setAvailablePromos(promos || [])
@@ -147,12 +164,14 @@ export function CheckoutPage() {
       setLoading(true)
       setError('')
       const buyNow = location.state?.buyNowItem
+      const checkoutItems = location.state?.checkoutItems
       const payload = {
         address_id: selectedAddress.id,
         payment_method: paymentMethod,
         ...(form.note.trim() ? { note: form.note.trim() } : {}),
         ...(promotion.trim() ? { promotion_code: promotion.trim() } : {}),
-        ...(buyNow ? { items: [{ book_id: Number(buyNow.book_id), quantity: Number(buyNow.quantity) }] } : {}),
+        ...(buyNow ? { items: [{ book_id: Number(buyNow.book_id), quantity: Number(buyNow.quantity) }] } :
+           checkoutItems ? { items: checkoutItems.map(it => ({ book_id: Number(it.book_id), quantity: Number(it.quantity) })) } : {}),
       }
       const resp = await ordersApi.checkout(payload)
       if (resp && resp.payment_url) {

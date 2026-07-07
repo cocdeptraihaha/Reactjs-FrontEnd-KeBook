@@ -40,6 +40,7 @@ function mergeCartData(cartRows, summaryRows) {
 export function CartPage() {
   const { isAuthenticated } = useAuth()
   const [items, setItems] = useState([])
+  const [selectedIds, setSelectedIds] = useState([])
   const [loading, setLoading] = useState(false)
   const [busyItemId, setBusyItemId] = useState(null)
   const [error, setError] = useState('')
@@ -50,7 +51,15 @@ export function CartPage() {
       if (!silent) setLoading(true)
       setError('')
       const [cartRows, summaryRows] = await Promise.all([cartApi.get(), cartApi.summary()])
-      setItems(mergeCartData(cartRows, summaryRows))
+      const merged = mergeCartData(cartRows, summaryRows)
+      setItems(merged)
+      setSelectedIds(prev => {
+        if (prev.length === 0) {
+          return merged.map(item => item.cart_id).filter(Boolean)
+        }
+        const currentIds = new Set(merged.map(item => item.cart_id))
+        return prev.filter(id => currentIds.has(id))
+      })
     } catch (e) {
       setError(e.message || 'Failed to load cart')
     } finally {
@@ -107,11 +116,32 @@ export function CartPage() {
     }
   }
 
+  function handleToggleSelect(item) {
+    const id = item.cart_id
+    if (!id) return
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
+
+  const allSelected = items.length > 0 && selectedIds.length === items.length
+  function handleToggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(items.map(item => item.cart_id).filter(Boolean))
+    }
+  }
+
+  const selectedItems = useMemo(() => {
+    return items.filter(item => selectedIds.includes(item.cart_id))
+  }, [items, selectedIds])
+
   const summary = useMemo(() => {
-    const subtotal = items.reduce((acc, item) => acc + Number(item?.price || 0) * Number(item?.quantity || 0), 0)
-    const itemCount = items.reduce((acc, item) => acc + Number(item?.quantity || 0), 0)
+    const subtotal = selectedItems.reduce((acc, item) => acc + Number(item?.price || 0) * Number(item?.quantity || 0), 0)
+    const itemCount = selectedItems.reduce((acc, item) => acc + Number(item?.quantity || 0), 0)
     return { subtotal, shipping: 0, tax: 0, itemCount }
-  }, [items])
+  }, [selectedItems])
 
   return (
     <Stack>
@@ -135,11 +165,24 @@ export function CartPage() {
           {loading && <StateText>Đang tải giỏ hàng...</StateText>}
           {!loading && error && <StateText role="alert">Lỗi: {error}</StateText>}
           {!loading && !error && isAuthenticated && items.length === 0 && <StateText>Giỏ hàng trống.</StateText>}
+          {!loading && !error && isAuthenticated && items.length > 0 && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px 12px', borderBottom: '1px solid rgba(185,170,150,0.3)', cursor: 'pointer', fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={handleToggleSelectAll}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--brand-700)', cursor: 'pointer' }}
+              />
+              <span>Chọn tất cả ({items.length} sản phẩm)</span>
+            </label>
+          )}
           {!loading && !error && items.map((item, idx) => (
             <CartItem
               key={item.cart_id || item.id || `item-${idx}`}
               item={item}
               busy={busyItemId === (item.cart_id || item.id)}
+              selected={selectedIds.includes(item.cart_id)}
+              onToggleSelect={handleToggleSelect}
               onIncrease={(row) => void updateQuantity(row, Number(row.quantity || 0) + 1)}
               onDecrease={(row) => void updateQuantity(row, Number(row.quantity || 0) - 1)}
               onRemove={(row) => void removeItem(row)}
@@ -151,7 +194,8 @@ export function CartPage() {
           shipping={summary.shipping}
           tax={summary.tax}
           itemCount={summary.itemCount}
-          disabled={!isAuthenticated || items.length === 0}
+          disabled={!isAuthenticated || selectedItems.length === 0}
+          checkoutItems={selectedItems}
         />
       </Layout>
     </Stack>

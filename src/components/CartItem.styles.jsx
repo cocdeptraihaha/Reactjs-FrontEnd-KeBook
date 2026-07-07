@@ -2,7 +2,8 @@ import styled from 'styled-components'
 
 export const Item = styled.article`
   display: grid;
-  grid-template-columns: 82px minmax(0, 1fr);
+  grid-template-columns: auto 82px minmax(0, 1fr);
+  align-items: center;
   gap: 12px;
   padding: 12px;
   border: 1px solid rgba(185, 170, 150, 0.58);
@@ -10,7 +11,7 @@ export const Item = styled.article`
   background: rgba(255, 250, 240, 0.72);
 
   @media (min-width: 760px) {
-    grid-template-columns: 96px minmax(0, 1fr);
+    grid-template-columns: auto 96px minmax(0, 1fr);
   }
 `
 
@@ -109,5 +110,13 @@ export const RemoveBtn = styled.button`
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
+`
+
+export const CheckboxInput = styled.input`
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-700);
+  cursor: pointer;
+  margin-right: 4px;
 `
 

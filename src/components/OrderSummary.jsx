@@ -4,7 +4,7 @@ function formatVnd(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')} đ`
 }
 
-export function OrderSummary({ subtotal, shipping, tax, itemCount = 0, disabled = false }) {
+export function OrderSummary({ subtotal, shipping, tax, itemCount = 0, disabled = false, checkoutItems = null }) {
   const total = subtotal + shipping + tax
 
   return (
@@ -20,7 +20,11 @@ export function OrderSummary({ subtotal, shipping, tax, itemCount = 0, disabled 
         <span>Tổng thanh toán</span>
         <strong>{formatVnd(total)}</strong>
       </Total>
-      <CTA to={disabled ? '/app/cart' : '/app/checkout'} aria-disabled={disabled}>
+      <CTA
+        to={disabled ? '/app/cart' : '/app/checkout'}
+        state={checkoutItems ? { checkoutItems } : undefined}
+        aria-disabled={disabled}
+      >
         {disabled ? 'Giỏ hàng trống' : 'Tiến hành thanh toán'}
       </CTA>
     </Card>

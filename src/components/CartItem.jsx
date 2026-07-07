@@ -15,6 +15,7 @@ import {
   UnitPrice,
   LinePrice,
   RemoveBtn,
+  CheckboxInput,
 } from './CartItem.styles'
 const PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
 
@@ -22,7 +23,7 @@ function formatVnd(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')} đ`
 }
 
-export function CartItem({ item, onIncrease, onDecrease, onRemove, busy }) {
+export function CartItem({ item, onIncrease, onDecrease, onRemove, selected, onToggleSelect, busy }) {
   const imageSrc = item?.image_url || PLACEHOLDER
   const qty = Number(item?.quantity || 0)
   const unitPrice = Number(item?.price || 0)
@@ -31,6 +32,12 @@ export function CartItem({ item, onIncrease, onDecrease, onRemove, busy }) {
 
   return (
     <Item>
+      <CheckboxInput
+        type="checkbox"
+        checked={selected}
+        onChange={() => onToggleSelect?.(item)}
+        disabled={busy}
+      />
       <Cover src={imageSrc} alt={item?.title || 'Book'} />
       <Body>
         <Head>
